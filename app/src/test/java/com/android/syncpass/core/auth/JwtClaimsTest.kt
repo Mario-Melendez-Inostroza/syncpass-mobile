@@ -27,6 +27,15 @@ class JwtClaimsTest {
     }
 
     @Test
+    fun `ASISTENTE es un rol valido y solo el asistente puro ve su portal`() {
+        val asistente = JwtClaims.usuario(jwtDePrueba(grupos = listOf("ASISTENTE")))!!
+        assertTrue(asistente.esAsistente)
+        assertTrue(asistente.tieneRolValido)
+        assertTrue(asistente.soloAsistente)
+        assertFalse(JwtClaims.usuario(jwtDePrueba(grupos = listOf("ASISTENTE", "MONITOR")))!!.soloAsistente)
+    }
+
+    @Test
     fun `el rol no distingue mayusculas`() {
         assertTrue(JwtClaims.usuario(jwtDePrueba(grupos = listOf("coordinador")))!!.esCoordinador)
     }

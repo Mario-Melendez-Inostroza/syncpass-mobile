@@ -3,6 +3,7 @@ package com.android.syncpass.core.auth
 import com.android.syncpass.core.network.ApiErrors
 import com.android.syncpass.core.network.AuthApi
 import com.android.syncpass.core.network.LoginRequest
+import com.android.syncpass.core.network.RegistroAsistenteRequest
 import com.android.syncpass.core.network.SesionApi
 import kotlinx.coroutines.flow.Flow
 
@@ -43,7 +44,7 @@ class AuthRepository(
         if (usuario == null || !usuario.tieneRolValido) {
             return Result.failure(
                 AuthException(
-                    "Tu usuario no tiene un rol asignado (COORDINADOR o MONITOR). " +
+                    "Tu usuario no tiene un rol asignado (COORDINADOR, MONITOR o ASISTENTE). " +
                         "Pide a un administrador que lo agregue a un grupo.",
                 ),
             )
@@ -51,6 +52,22 @@ class AuthRepository(
 
         storage.guardar(Tokens(acceso, identidad, datos?.refreshToken), correo)
         return Result.success(usuario)
+    }
+
+    /**
+     * Crea una cuenta de asistente y entra con ella. El servidor la deja confirmada y en el grupo ASISTENTE; no guarda
+     * nombre ni correo en su base, solo un código sintético (caso §5.1).
+     */
+    suspend fun registrarAsistente(email: String, password: String, tipo: String): Result<UserInfo> {
+        val correo = email.trim()
+        try {
+            val respuesta = authApi.registrarAsistente(RegistroAsistenteRequest(correo, password, tipo))
+            if (!respuesta.success) return Result.failure(AuthException(respuesta.message ?: "No se pudo crear la cuenta."))
+        } catch (e: Exception) {
+            val mensaje = (e as? retrofit2.HttpException)?.let { ApiErrors.cuerpo(it)?.mensaje } ?: ApiErrors.describir(e)
+            return Result.failure(AuthException(mensaje, e))
+        }
+        return iniciarSesion(correo, password)
     }
 
     /** Usuario de la sesión guardada, o null si no hay sesión (o su token ya no se puede leer). */

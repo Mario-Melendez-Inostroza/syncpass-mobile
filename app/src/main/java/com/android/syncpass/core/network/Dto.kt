@@ -28,6 +28,30 @@ data class ErrorDto(
 
 data class LoginRequest(val email: String, val password: String)
 
+/** Registro de un asistente: el servidor fija el rol; [tipo] es VECINO, ESTUDIANTE o DOCENTE. */
+data class RegistroAsistenteRequest(val email: String, val password: String, val tipo: String)
+
+/** Mi perfil de asistente: código sintético, tipo y el id que lleva el QR (ASISTENTE_{id}). */
+data class MiPerfilDto(
+    val id: Long? = null,
+    val codigo: String? = null,
+    val tipo: String? = null,
+    val qr: String? = null,
+)
+
+/** Un taller visto por el asistente: cupos que quedan y si ya está inscrito. */
+data class TallerDto(
+    val id: Long? = null,
+    val nombre: String? = null,
+    val proyecto: String? = null,
+    val fechaHoraProgramada: String? = null,
+    val recinto: String? = null,
+    val cuposMaximos: Int? = null,
+    val inscritos: Long? = null,
+    val cuposDisponibles: Int? = null,
+    val inscrito: Boolean? = null,
+)
+
 /** [email] solo es obligatorio si el App Client de Cognito tiene client secret; con client público se ignora. */
 data class RefreshRequest(val refreshToken: String, val email: String? = null)
 

@@ -71,7 +71,8 @@ class AppContainer(contexto: Context) {
             asistenciaDao = baseDeDatos.asistenciaDao(),
             encuestaDao = baseDeDatos.encuestaDao(),
             prefs = syncPrefs,
-            subActual = { authRepository.usuarioActual()?.sub },
+            // Un asistente no sincroniza (el servidor se lo niega): sin usuario del equipo no hay nada que subir.
+            subActual = { authRepository.usuarioActual()?.takeUnless { it.soloAsistente }?.sub },
             reloj = Reloj.Sistema,
             transaccion = RoomTransaccion(baseDeDatos),
         )

@@ -32,7 +32,7 @@ Esta app **nunca habla con Cognito**: inicia sesión contra el backend, que es q
 | Alta de quien llega **sin inscripción previa** (§3.1) | "Agregar persona sin inscripción" en la lista: eligiendo Estudiante, Vecino o Docente, la persona queda creada y marcada en un solo paso, también sin conexión. Nace con un id provisional negativo y se reemplaza por el real al sincronizar (`SyncEngine`); sin ningún dato personal |
 | Encuesta inmediata, escala 1 a 5 (§2.4, §3.2) | `EncuestaScreen`: satisfacción, utilidad y comentarios |
 | Avisos visuales inmediatos (§3.3) | Aviso en pantalla tras cada acción, banner de pendientes y notificación al terminar de sincronizar |
-| Autenticación por roles (§3.4) | Grupos de Cognito **COORDINADOR** y **MONITOR** (`cognito:groups`) |
+| Autenticación por roles (§3.4) | Grupos de Cognito **COORDINADOR**, **MONITOR** y **ASISTENTE** (`cognito:groups`) |
 | Quórum en vivo (§2.4, §4.1) | `ResumenScreen` (solo COORDINADOR; el servidor lo hace cumplir con un 403) |
 | Claro/oscuro, botones grandes, una mano (§3.3) | Material 3; botones principales de 56 dp; mínimo táctil de 48 dp |
 | Android 8.0 (API 26) o superior (§5.1) | `minSdk = 26` |
@@ -44,6 +44,9 @@ Salen de `caso.md` §3.1, no de las apps de ejemplo del profesor:
 
 - **COORDINADOR** — Docente / Coordinador(a) de Proyecto: registra y además ve el quórum y imprime credenciales.
 - **MONITOR** — Estudiante voluntario: registra asistencia y encuestas en terreno.
+- **ASISTENTE** — Beneficiario comunitario: se registra desde la pantalla de ingreso ("Soy asistente · Crear mi cuenta"), ve los
+  talleres próximos con sus cupos, se inscribe y muestra su código QR (`ASISTENTE_{id}`) al monitor. Necesita conexión para
+  registrarse e inscribirse y **no sincroniza** (el servidor se lo niega). No se guardan nombre ni correo en la base: solo un código sintético.
 - Los beneficiarios **no son usuarios de la app**: son registros del catálogo que el monitor marca con el QR.
 
 Un usuario sin ninguno de esos dos grupos no puede entrar (la app lo explica). Los grupos que usa la app para
@@ -83,7 +86,7 @@ Requisitos: Android Studio reciente, JDK 21 o superior (el que trae Android Stud
 2. Levanta el backend (carpeta `fs2-api`) en el puerto 8080. Para tener catálogo de prueba, arráncalo con el perfil
    `demo` (`SPRING_PROFILES_ACTIVE=demo`), que carga datos **ficticios**. Nunca lo uses en producción.
 3. Ejecuta la app en el **emulador**. El emulador ve el equipo anfitrión como `10.0.2.2`, que es la URL de debug.
-4. Inicia sesión con un usuario del pool que pertenezca a `COORDINADOR` o `MONITOR`.
+4. Inicia sesión con un usuario del pool que pertenezca a `COORDINADOR`, `MONITOR` o `ASISTENTE` (este último se crea solo desde la app).
 
 Desde la terminal:
 

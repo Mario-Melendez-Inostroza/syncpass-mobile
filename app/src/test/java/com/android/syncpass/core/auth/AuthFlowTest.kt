@@ -119,8 +119,39 @@ class AuthFlowTest {
         val resultado = repositorio(storage).iniciarSesion("x@example.com", "Clave-de-prueba-1!")
 
         assertTrue(resultado.isFailure)
-        assertTrue(resultado.exceptionOrNull()!!.message!!.contains("COORDINADOR o MONITOR"))
+        assertTrue(resultado.exceptionOrNull()!!.message!!.contains("COORDINADOR, MONITOR o ASISTENTE"))
         assertNull("no debe quedar sesión guardada", storage.tokens())
+    }
+
+    @Test
+    fun `registrar un asistente crea la cuenta con el tipo elegido y luego inicia sesion`() = runBlocking {
+        val storage = FakeTokenStorage()
+        servidor.enqueue(ok("""{"success":true,"message":"Cuenta de asistente creada","data":{"id":7,"codigo":"REG-AB12CD34","tipo":"VECINO","qr":"ASISTENTE_7"}}"""))
+        servidor.enqueue(ok(respuestaLogin(jwtDePrueba(grupos = listOf("ASISTENTE")))))
+
+        val resultado = repositorio(storage).registrarAsistente(" vecina@example.com ", "Clave-segura-1", "VECINO")
+
+        assertTrue(resultado.isSuccess)
+        assertTrue(resultado.getOrThrow().soloAsistente)
+        val registro = servidor.takeRequest()
+        assertEquals("/api/auth/registro-asistente", registro.path)
+        assertEquals("""{"email":"vecina@example.com","password":"Clave-segura-1","tipo":"VECINO"}""", registro.body.readUtf8())
+        assertNull("el registro no manda Authorization", registro.getHeader("Authorization"))
+        assertEquals("/api/auth/login", servidor.takeRequest().path)
+        assertEquals("acceso-1", storage.tokens()?.accessToken)
+    }
+
+    @Test
+    fun `si el correo ya existe se muestra el motivo del servidor y no se guarda sesion`() = runBlocking {
+        val storage = FakeTokenStorage()
+        servidor.enqueue(error(409, """{"error":"CONFLICT","mensaje":"Ese correo ya está registrado.","status":409}"""))
+
+        val resultado = repositorio(storage).registrarAsistente("vecina@example.com", "Clave-segura-1", "VECINO")
+
+        assertTrue(resultado.isFailure)
+        assertEquals("Ese correo ya está registrado.", resultado.exceptionOrNull()!!.message)
+        assertNull(storage.tokens())
+        assertEquals(1, servidor.requestCount)
     }
 
     @Test

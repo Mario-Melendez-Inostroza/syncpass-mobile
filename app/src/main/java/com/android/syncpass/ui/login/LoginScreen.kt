@@ -88,7 +88,7 @@ class LoginViewModel(private val auth: AuthRepository) : ViewModel() {
 }
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(onCrearCuenta: () -> Unit = {}) {
     val vm = viewModelDe { LoginViewModel(it.authRepository) }
     val ui by vm.ui.collectAsStateWithLifecycle()
     var verPassword by rememberSaveable { mutableStateOf(false) }
@@ -156,6 +156,10 @@ fun LoginScreen() {
                 },
                 cargando = ui.cargando,
             )
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.TextButton(onClick = onCrearCuenta, enabled = !ui.cargando) {
+                Text("Soy asistente · Crear mi cuenta")
+            }
         }
     }
 }

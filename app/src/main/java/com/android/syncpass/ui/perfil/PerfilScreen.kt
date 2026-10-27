@@ -70,6 +70,7 @@ fun PerfilScreen(usuario: UserInfo, barraInferior: @Composable () -> Unit) {
                         buildList {
                             if (usuario.esCoordinador) add("Docente / Coordinador(a)")
                             if (usuario.esMonitor) add("Estudiante voluntario / Monitor")
+                            if (usuario.esAsistente) add("Asistente")
                         }.joinToString(" · "),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,

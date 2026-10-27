@@ -18,6 +18,10 @@ interface AuthApi {
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): ApiResponse<TokensDto>
 
+    /** Crea una cuenta de asistente (grupo ASISTENTE, fijado por el servidor). */
+    @POST("api/auth/registro-asistente")
+    suspend fun registrarAsistente(@Body request: RegistroAsistenteRequest): ApiResponse<MiPerfilDto>
+
     @POST("api/auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): ApiResponse<TokensDto>
 }
@@ -26,6 +30,22 @@ interface AuthApi {
 interface SesionApi {
     @POST("api/auth/logout")
     suspend fun logout(): ApiResponse<Any>
+}
+
+/** La cuenta del asistente. Solo el grupo ASISTENTE; el servidor responde 403 a cualquier otro. */
+interface MiCuentaApi {
+    @GET("api/mi/perfil")
+    suspend fun perfil(): ApiResponse<MiPerfilDto>
+
+    @GET("api/mi/talleres")
+    suspend fun talleres(): ApiResponse<List<TallerDto>>
+
+    /** 201 al inscribirse; 409 con el motivo si ya está inscrito o no hay cupos. */
+    @POST("api/mi/talleres/{id}/inscripcion")
+    suspend fun inscribir(@Path("id") eventoId: Long): ApiResponse<Any>
+
+    @retrofit2.http.DELETE("api/mi/talleres/{id}/inscripcion")
+    suspend fun cancelar(@Path("id") eventoId: Long): ApiResponse<Any>
 }
 
 /** Sincronización offline-first y quórum. El token lo añade TokenInterceptor; nunca se pasa a mano. */

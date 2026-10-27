@@ -15,7 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.android.syncpass.ui.AppNavegacion
+import com.android.syncpass.ui.asistente.AsistenteNavegacion
+import com.android.syncpass.ui.asistente.RegistroScreen
 import com.android.syncpass.ui.LocalContenedor
 import com.android.syncpass.ui.login.LoginScreen
 import com.android.syncpass.ui.sesion.EstadoSesion
@@ -52,11 +57,19 @@ private fun Raiz() {
         when (val actual = estado) {
             EstadoSesion.Cargando ->
                 Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center)) }
-            EstadoSesion.SinSesion -> LoginScreen()
+            EstadoSesion.SinSesion -> {
+                var creandoCuenta by rememberSaveable { mutableStateOf(false) }
+                if (creandoCuenta) RegistroScreen(onVolver = { creandoCuenta = false })
+                else LoginScreen(onCrearCuenta = { creandoCuenta = true })
+            }
             is EstadoSesion.Activa -> {
                 // Al entrar (o volver a abrir la app con sesión) se envía lo que haya pendiente y se baja el catálogo.
-                LaunchedEffect(actual.usuario.sub) { contenedor.syncScheduler.solicitarAhora() }
-                AppNavegacion(actual.usuario)
+                if (actual.usuario.soloAsistente) {
+                    AsistenteNavegacion(actual.usuario)
+                } else {
+                    LaunchedEffect(actual.usuario.sub) { contenedor.syncScheduler.solicitarAhora() }
+                    AppNavegacion(actual.usuario)
+                }
             }
         }
     }

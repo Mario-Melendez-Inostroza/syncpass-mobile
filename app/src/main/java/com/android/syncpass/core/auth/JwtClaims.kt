@@ -11,6 +11,9 @@ object Roles {
 
     /** Estudiante Voluntario / Monitor: registra asistencia y encuestas en terreno. */
     const val MONITOR = "MONITOR"
+
+    /** Beneficiario Comunitario / Asistente: se registra, ve los talleres, se inscribe y muestra su QR. */
+    const val ASISTENTE = "ASISTENTE"
 }
 
 data class UserInfo(
@@ -22,8 +25,13 @@ data class UserInfo(
     val esCoordinador: Boolean get() = grupos.any { it.equals(Roles.COORDINADOR, ignoreCase = true) }
     val esMonitor: Boolean get() = grupos.any { it.equals(Roles.MONITOR, ignoreCase = true) }
 
+    val esAsistente: Boolean get() = grupos.any { it.equals(Roles.ASISTENTE, ignoreCase = true) }
+
+    /** true si SOLO es asistente: ve su portal y no la app del equipo. */
+    val soloAsistente: Boolean get() = esAsistente && !esCoordinador && !esMonitor
+
     /** Solo se admite a quien pertenece a un grupo del caso. */
-    val tieneRolValido: Boolean get() = esCoordinador || esMonitor
+    val tieneRolValido: Boolean get() = esCoordinador || esMonitor || esAsistente
 }
 
 /**
