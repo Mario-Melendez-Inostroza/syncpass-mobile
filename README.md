@@ -3,8 +3,21 @@
 Registro de asistencia en terreno **con o sin conexión**, para proyectos de vinculación comunitaria
 (caso DSY1105 · Duoc UC). Kotlin · Jetpack Compose · Material 3 · MVVM · Room · Retrofit · WorkManager.
 
-El backend es `fs2-api` (Spring Boot, rama `syncpass-integrado`). Esta app **nunca habla con Cognito**: inicia
-sesión contra el backend, que es quien se entiende con Cognito.
+## El sistema completo
+
+```
+Usuario ─► Panel web (React)  ─┐
+                                ├─► API Gateway ─► API Spring Boot (EC2) ─┬─► Amazon Cognito
+Usuario ─► App Android (esta)  ┘                                          └─► Supabase PostgreSQL
+```
+
+| Repositorio | Qué es |
+|---|---|
+| **syncpass-mobile** (este) | App Android del monitor: registra asistencia por QR o lista, da de alta a quien llega sin inscripción, encuestas, todo sin conexión |
+| **syncpass-api** | Backend: autenticación, catálogo, sincronización por lotes, quórum y reportes |
+| **syncpass-web** | Página de inicio pública y panel del coordinador |
+
+Esta app **nunca habla con Cognito**: inicia sesión contra el backend, que es quien se entiende con Cognito.
 
 ## Qué hace
 
@@ -87,6 +100,43 @@ evidente en lugar de apuntar a un dominio que parezca real.
 En un teléfono físico la URL de debug por defecto no sirve (`10.0.2.2` es solo del emulador). Para apuntar al API
 Gateway sin tocar el código, define `SYNCPASS_API_URL=https://<api-gateway>/` en `~/.gradle/gradle.properties`
 (o pásalo con `-PSYNCPASS_API_URL`). Lo respetan las compilaciones debug y release.
+
+## Instalarla en un teléfono real
+
+Es la forma de probar de verdad la cámara, el GPS y el modo avión.
+
+1. **Apunta la app al backend.** Crea `~/.gradle/gradle.properties` (en Windows, `C:\Users\<tu usuario>\.gradle\`) con una
+   línea: `SYNCPASS_API_URL=https://<api-gateway>/` (con la barra final). No se sube a Git ni lleva secretos. Luego, en
+   Android Studio, *Sync Project with Gradle Files*.
+2. **Activa la depuración USB**: Ajustes → Acerca del teléfono → toca 7 veces *Número de compilación*; después Ajustes →
+   Opciones de desarrollador → *Depuración por USB*. Conecta el cable (de datos, no solo de carga) y acepta el aviso.
+3. Elige tu teléfono arriba y pulsa **Run**. La app queda instalada y se puede desconectar el cable.
+4. **Sin cable**: *Depuración inalámbrica* (Android 11 o superior) y *Pair Devices Using Wi-Fi* en Android Studio, con el PC
+   y el teléfono en la misma red. Otra opción: *Build → Build APK(s)* y pasar el archivo `app-debug.apk` al teléfono.
+
+Permisos que pide: **cámara** (leer QR), **ubicación aproximada** (referencial, nunca bloquea) y **notificaciones**
+(avisar cuando se envía lo pendiente).
+
+### Cuentas de prueba
+
+Las crea el equipo docente en el User Pool de Cognito (no hay auto-registro en la app). En el entorno de demostración:
+`monitor.demo@example.com` (grupo MONITOR) y `docente.demo@example.com` (grupo COORDINADOR). Son cuentas ficticias.
+
+### Probar el modo sin conexión
+
+1. Con internet, inicia sesión y deja que se descargue el catálogo (la primera vez es obligatoria).
+2. Activa el **modo avión** y marca asistencia (por lista o QR) o agrega una persona sin inscripción: queda
+   *pendiente de enviar*.
+3. Desactiva el modo avión: en unos segundos llega una notificación y el registro pasa a *Enviado*.
+
+### Problemas frecuentes
+
+| Síntoma | Causa y solución |
+|---|---|
+| Android Studio: `jlink executable ... does not exist` | Gradle usa un JRE recortado (p. ej. el de la extensión de Java de VS Code). En *Settings → Build Tools → Gradle → Gradle JDK* y en *Project Structure → SDK* elige un **JDK 21 completo** (`temurin-21` o el *jbr* de Android Studio) y haz el Sync |
+| "Servidor no disponible" al iniciar sesión | El backend o la EC2 están apagados (en un Learner Lab se apagan al terminar la sesión) o `SYNCPASS_API_URL` está mal. Comprueba `<url>/api/health` |
+| La app se cierra al abrir tras actualizarla | Falló la migración de Room. Desinstala y reinstala (son datos de prueba) y avisa del error |
+| El teléfono no aparece en Android Studio | Cable solo de carga, depuración USB sin activar o aviso sin aceptar |
 
 ## Contrato con el backend
 
