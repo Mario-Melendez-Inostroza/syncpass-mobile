@@ -6,9 +6,11 @@ import com.android.syncpass.core.GeneradorUuid
 import com.android.syncpass.core.Reloj
 import com.android.syncpass.data.local.AsistenciaDao
 import com.android.syncpass.data.local.AsistenciaEntity
+import com.android.syncpass.data.local.AsistenteEntity
 import com.android.syncpass.data.local.CatalogoDao
 import com.android.syncpass.data.local.EncuestaDao
 import com.android.syncpass.data.local.EncuestaEntity
+import com.android.syncpass.data.local.EstadoSync
 
 sealed interface ResultadoMarcacion {
     data class Registrada(val asistencia: AsistenciaEntity) : ResultadoMarcacion
@@ -42,6 +44,7 @@ class RegistroRepository(
     private val encuestaDao: EncuestaDao,
     private val reloj: Reloj,
     private val uuid: GeneradorUuid,
+    private val transaccion: Transaccion = Transaccion.EnLinea,
 ) {
 
     /**
@@ -78,6 +81,54 @@ class RegistroRepository(
         return ResultadoMarcacion.Registrada(nueva)
     }
 
+    /**
+     * Da de alta a alguien que llegó sin inscripción previa Y lo marca como presente, en un solo paso (caso §3.1).
+     *
+     * Funciona sin conexión: el asistente nace con un id PROVISIONAL negativo y un uuid propio, y se sube después
+     * (SyncEngine) para recibir su id y código reales. Las dos filas se escriben en una transacción: o quedan
+     * ambas o ninguna, porque una asistencia sin su asistente quedaría huérfana.
+     *
+     * Sin datos personales (caso §5.1): solo el [tipo] y un código provisional visible, p. ej. NUEVO-A1B2C3.
+     *
+     * @param tipo uno de [TIPOS_ASISTENTE].
+     */
+    suspend fun altaYMarcar(
+        eventoId: Long,
+        tipo: String,
+        usuarioSub: String,
+        coordenadas: Coordenadas?,
+    ): ResultadoMarcacion {
+        require(tipo in TIPOS_ASISTENTE) { "Tipo de asistente desconocido: $tipo" }
+        catalogoDao.evento(eventoId) ?: return ResultadoMarcacion.EventoDesconocido
+
+        val uuidAsistente = uuid.nuevo()
+        val ahora = reloj.ahoraMillis()
+        return transaccion.ejecutar {
+            val id = catalogoDao.siguienteIdProvisional()
+            catalogoDao.insertarAsistente(
+                AsistenteEntity(
+                    id = id,
+                    codigo = CODIGO_PROVISIONAL + uuidAsistente.replace("-", "").take(LARGO_CODIGO_PROVISIONAL).uppercase(),
+                    tipo = tipo,
+                    estadoInscripcion = INSCRIPCION_NUEVO,
+                    uuid = uuidAsistente,
+                    estadoSync = EstadoSync.PENDIENTE,
+                ),
+            )
+            val asistencia = AsistenciaEntity(
+                uuid = uuid.nuevo(),
+                eventoId = eventoId,
+                asistenteId = id,
+                marcadoEnMillis = ahora,
+                latitud = coordenadas?.latitud,
+                longitud = coordenadas?.longitud,
+                usuarioSub = usuarioSub,
+            )
+            asistenciaDao.insertar(asistencia)
+            ResultadoMarcacion.Registrada(asistencia)
+        }
+    }
+
     /** Escala de 1 a 5 para satisfacción y utilidad (caso §3.2). */
     suspend fun registrarEncuesta(
         asistenciaUuid: String,
@@ -111,6 +162,14 @@ class RegistroRepository(
 
     companion object {
         val ESCALA = 1..5
+
+        /** Tipos de participante que acepta el servidor (caso §3.2). */
+        val TIPOS_ASISTENTE = listOf("ESTUDIANTE", "VECINO", "DOCENTE")
+
+        /** Quien llega sin inscripción previa. */
+        const val INSCRIPCION_NUEVO = "SIN_INSCRIPCION"
+        const val CODIGO_PROVISIONAL = "NUEVO-"
+        const val LARGO_CODIGO_PROVISIONAL = 6
 
         /** Igual que el límite del backend. */
         const val MAX_COMENTARIO = 1000

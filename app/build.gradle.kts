@@ -23,7 +23,9 @@ android {
     buildTypes {
         debug {
             // 10.0.2.2 es el host de la máquina de desarrollo visto desde el emulador de Android Studio.
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+            // Para probar contra el API Gateway real sin tocar el código: SYNCPASS_API_URL en ~/.gradle/gradle.properties.
+            val url = (project.findProperty("SYNCPASS_API_URL") as String?) ?: "http://10.0.2.2:8080/"
+            buildConfigField("String", "API_BASE_URL", "\"$url\"")
         }
         release {
             // URL de API Gateway (HTTPS). Se define al desplegar: -PSYNCPASS_API_URL=https://xxxx.execute-api...
@@ -43,6 +45,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    sourceSets {
+        // Los esquemas exportados de Room (app/schemas) alimentan MigrationTestHelper en las pruebas instrumentadas.
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
     testOptions {
         unitTests {
@@ -105,6 +111,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

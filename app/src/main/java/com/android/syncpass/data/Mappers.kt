@@ -2,6 +2,7 @@ package com.android.syncpass.data
 
 import com.android.syncpass.core.network.AsistenciaSyncDto
 import com.android.syncpass.core.network.AsistenteDto
+import com.android.syncpass.core.network.AsistenteSyncDto
 import com.android.syncpass.core.network.EncuestaSyncDto
 import com.android.syncpass.core.network.EventoDto
 import com.android.syncpass.core.network.ProyectoDto
@@ -58,6 +59,9 @@ fun AsistenteDto.aEntidad(): AsistenteEntity? {
 
 /** Instante en ISO-8601 UTC, como lo espera el backend (java.time.Instant). */
 fun Long.aIso(): String = Instant.ofEpochMilli(this).toString()
+
+/** Solo uuid y tipo: el servidor asigna el código y la inscripción. Quien llama garantiza que [uuid] no es nulo. */
+fun AsistenteEntity.aDto(): AsistenteSyncDto = AsistenteSyncDto(uuid = requireNotNull(uuid), tipo = tipo)
 
 /** No incluye el usuario que registra: el servidor lo toma del token. */
 fun AsistenciaEntity.aDto(): AsistenciaSyncDto = AsistenciaSyncDto(

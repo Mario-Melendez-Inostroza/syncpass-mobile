@@ -120,6 +120,39 @@ class MarcarViewModel(
         }
     }
 
+    /**
+     * Alguien llegó sin inscripción previa (caso §3.1): se le da de alta y se le marca presente en un solo paso.
+     * Funciona sin conexión; el alta y la marcación viajan juntas cuando vuelva la red. Sin datos personales:
+     * solo el [tipo] de participante.
+     */
+    fun altaYMarcar(tipo: String) {
+        if (_ocupado.value) return
+        _ocupado.value = true
+        viewModelScope.launch {
+            try {
+                val coordenadas = ubicacion.actual()
+                _ultimo.value = when (val r = registro.altaYMarcar(eventoId, tipo, sub, coordenadas)) {
+                    is ResultadoMarcacion.Registrada -> {
+                        _sesionMarcadas.update { it + 1 }
+                        scheduler.solicitarAhora()
+                        ResultadoVisible(
+                            "Persona nueva registrada y marcada. Se enviará cuando haya conexión.",
+                            esError = false,
+                            asistenciaUuid = r.asistencia.uuid,
+                        )
+                    }
+                    ResultadoMarcacion.EventoDesconocido ->
+                        ResultadoVisible("El evento ya no está en el catálogo.", esError = true)
+                    // Una persona recién creada no puede estar marcada ni faltar del catálogo: no ocurre.
+                    is ResultadoMarcacion.YaMarcada, ResultadoMarcacion.AsistenteDesconocido ->
+                        ResultadoVisible("No se pudo registrar a la persona. Inténtalo de nuevo.", esError = true)
+                }
+            } finally {
+                _ocupado.value = false
+            }
+        }
+    }
+
     fun limpiarResultado() {
         _ultimo.value = null
     }

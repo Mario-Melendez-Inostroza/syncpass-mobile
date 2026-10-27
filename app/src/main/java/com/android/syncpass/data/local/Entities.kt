@@ -46,14 +46,32 @@ data class EventoEntity(
     val radioMetros: Int,
 )
 
-/** Sin datos personales: código sintético y tipo (caso §3.2 y §5.1). */
-@Entity(tableName = "asistentes", indices = [Index(value = ["codigo"], unique = true)])
+/**
+ * Sin datos personales: código sintético y tipo (caso §3.2 y §5.1).
+ *
+ * Los asistentes del catálogo traen el id del servidor (positivo). El que da de alta el monitor en terreno
+ * (caso §3.1: "anota a quienes llegan sin inscripción previa") nace aquí, sin conexión, con un id PROVISIONAL
+ * NEGATIVO y su propio [uuid]. Al sincronizar, el servidor responde con el id y el código reales y esta fila se
+ * reemplaza por la definitiva (SyncEngine). Un id negativo significa "todavía no existe en el servidor".
+ */
+@Entity(
+    tableName = "asistentes",
+    indices = [Index(value = ["codigo"], unique = true), Index(value = ["uuid"], unique = true)],
+)
 data class AsistenteEntity(
     @PrimaryKey val id: Long,
     val codigo: String,
     val tipo: String,
     val estadoInscripcion: String,
-)
+    /** Clave de idempotencia del alta en terreno. Nulo en los que vienen del catálogo. */
+    val uuid: String? = null,
+    /** SINCRONIZADO para los del servidor; PENDIENTE mientras un alta en terreno espera subir. */
+    val estadoSync: EstadoSync = EstadoSync.SINCRONIZADO,
+    val motivoFallo: String? = null,
+) {
+    /** true mientras el asistente solo existe en este teléfono. */
+    val esProvisional: Boolean get() = id < 0
+}
 
 // ------------------------------------------------------------------ registros hechos en terreno
 

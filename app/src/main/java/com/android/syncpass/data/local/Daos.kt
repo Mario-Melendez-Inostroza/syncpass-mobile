@@ -36,6 +36,26 @@ interface CatalogoDao {
 
     @Query("SELECT * FROM asistentes WHERE id = :id")
     suspend fun asistente(id: Long): AsistenteEntity?
+
+    // --- altas en terreno (asistentes con id provisional negativo) ---
+
+    /** Falla (SQLiteConstraintException) si el código o el uuid ya existen. */
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertarAsistente(asistente: AsistenteEntity)
+
+    /** El próximo id provisional: -1 si no hay ninguno, y uno menos que el menor existente en otro caso. */
+    @Query("SELECT COALESCE(MIN(id), 0) - 1 FROM asistentes WHERE id < 0")
+    suspend fun siguienteIdProvisional(): Long
+
+    /** Las altas que esperan subir, en el orden en que se hicieron (el primer provisional es -1). */
+    @Query("SELECT * FROM asistentes WHERE id < 0 AND estadoSync = 'PENDIENTE' ORDER BY id DESC")
+    suspend fun asistentesPendientes(): List<AsistenteEntity>
+
+    @Query("UPDATE asistentes SET estadoSync = 'FALLIDO', motivoFallo = :motivo WHERE id = :id")
+    suspend fun marcarAsistenteFallido(id: Long, motivo: String)
+
+    @Query("DELETE FROM asistentes WHERE id = :id")
+    suspend fun eliminarAsistente(id: Long)
 }
 
 @Dao
@@ -59,11 +79,20 @@ interface AsistenciaDao {
     )
     fun observarPorEvento(eventoId: Long): Flow<List<AsistenciaConAsistente>>
 
-    /** Solo los del usuario indicado, en el orden en que se marcaron. */
+    /**
+     * Solo los del usuario indicado, en el orden en que se marcaron. Se excluyen las de un asistente todavía
+     * provisional (id negativo): el servidor no lo conoce, y subirlas daría ASISTENTE_NO_ENCONTRADO. Esperan a que
+     * su alta se confirme y [reasignarAsistente] les ponga el id real.
+     */
     @Query(
-        "SELECT * FROM asistencias WHERE estadoSync = 'PENDIENTE' AND usuarioSub = :sub ORDER BY marcadoEnMillis",
+        "SELECT * FROM asistencias WHERE estadoSync = 'PENDIENTE' AND usuarioSub = :sub AND asistenteId > 0 " +
+            "ORDER BY marcadoEnMillis",
     )
     suspend fun pendientes(sub: String): List<AsistenciaEntity>
+
+    /** Cambia el id provisional de un asistente por el real en todas sus asistencias. */
+    @Query("UPDATE asistencias SET asistenteId = :real WHERE asistenteId = :provisional")
+    suspend fun reasignarAsistente(provisional: Long, real: Long)
 
     @Query(
         "UPDATE asistencias SET estadoSync = 'SINCRONIZADO', motivoFallo = NULL, servidorId = :servidorId, " +

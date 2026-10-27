@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -153,7 +154,9 @@ fun ResumenScreen(eventoId: Long, onAtras: () -> Unit) {
 // ------------------------------------------------------------------ credenciales QR
 
 class CredencialesViewModel(catalogoDao: CatalogoDao) : ViewModel() {
+    // Sin los provisionales (id negativo): todavía no existen en el servidor y CodigoQr no admite ids no positivos.
     val asistentes: StateFlow<List<AsistenteEntity>> = catalogoDao.observarAsistentes()
+        .map { lista -> lista.filter { it.id > 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
 

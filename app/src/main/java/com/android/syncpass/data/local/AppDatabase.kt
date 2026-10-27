@@ -18,8 +18,12 @@ class Converters {
 /**
  * Base local (SQLite vía Room): catálogo descargado y registros hechos sin conexión.
  *
- * Es la versión 1 de una app nueva, así que no hay migraciones. El esquema se exporta a app/schemas
- * (exportSchema = true) para poder escribir y probar migraciones cuando cambie.
+ * Versiones:
+ *  - 1: catálogo y registros de asistencia y encuestas.
+ *  - 2: asistentes dados de alta en terreno (columnas uuid, estadoSync y motivoFallo en `asistentes`).
+ *
+ * El esquema se exporta a app/schemas (exportSchema = true) y cada cambio lleva su migración en
+ * [MIGRACION_1_2] y siguientes: sin ella Room se niega a abrir una base instalada con la versión anterior.
  */
 @Database(
     entities = [
@@ -29,7 +33,7 @@ class Converters {
         AsistenciaEntity::class,
         EncuestaEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -40,6 +44,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         fun crear(context: Context): AppDatabase =
-            Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "syncpass.db").build()
+            Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "syncpass.db")
+                .addMigrations(MIGRACION_1_2)
+                .build()
     }
 }

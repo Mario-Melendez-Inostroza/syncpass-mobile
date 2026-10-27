@@ -1,14 +1,18 @@
 package com.android.syncpass.sync
 
 import com.android.syncpass.core.Reloj
+import com.android.syncpass.core.network.ResultadoAsistenteDto
 import com.android.syncpass.core.network.ResultadoSyncDto
+import com.android.syncpass.core.network.SincronizarAsistentesRequest
 import com.android.syncpass.core.network.SincronizarAsistenciasRequest
 import com.android.syncpass.core.network.SincronizarEncuestasRequest
 import com.android.syncpass.core.network.SyncPassApi
+import com.android.syncpass.data.Transaccion
 import com.android.syncpass.data.aDto
 import com.android.syncpass.data.aEntidad
 import com.android.syncpass.data.local.AsistenciaDao
 import com.android.syncpass.data.local.AsistenciaEntity
+import com.android.syncpass.data.local.AsistenteEntity
 import com.android.syncpass.data.local.CatalogoDao
 import com.android.syncpass.data.local.EncuestaDao
 import com.android.syncpass.data.local.EncuestaEntity
@@ -32,7 +36,13 @@ data class ResumenCatalogo(val proyectos: Int, val eventos: Int, val asistentes:
  */
 data class ResumenLote(val sincronizados: Int, val fallidos: Int, val pendientes: Int)
 
-data class ResumenSync(val catalogo: ResumenCatalogo, val asistencias: ResumenLote, val encuestas: ResumenLote) {
+data class ResumenSync(
+    val catalogo: ResumenCatalogo,
+    val asistencias: ResumenLote,
+    val encuestas: ResumenLote,
+    /** Altas de asistentes hechas en terreno (caso §3.1). No suman a [totalSincronizados]: viajan con su asistencia. */
+    val asistentesNuevos: ResumenLote = ResumenLote(0, 0, 0),
+) {
     val totalSincronizados: Int get() = asistencias.sincronizados + encuestas.sincronizados
 }
 
@@ -63,7 +73,8 @@ private class RespuestaInvalidaException : Exception("El servidor respondió con
  *  - Un registro rechazado no frena al resto del lote.
  *  - Solo se envían los registros del usuario con sesión: el servidor atribuye lo que recibe al dueño del
  *    token, y subir lo de otro usuario falsearía quién registró.
- *  - Las asistencias se suben ANTES que las encuestas, porque cada encuesta cuelga de una asistencia.
+ *  - El orden es catálogo, asistentes nuevos, asistencias y encuestas: cada paso depende del anterior (la asistencia
+ *    de alguien dado de alta en terreno necesita su id real; la encuesta cuelga de una asistencia).
  *  - Nunca hay dos sincronizaciones a la vez.
  */
 class SyncEngine(
@@ -74,6 +85,7 @@ class SyncEngine(
     private val prefs: SyncPrefs,
     private val subActual: suspend () -> String?,
     private val reloj: Reloj,
+    private val transaccion: Transaccion = Transaccion.EnLinea,
 ) {
     private val candado = Mutex()
 
@@ -83,10 +95,12 @@ class SyncEngine(
         val sub = subActual() ?: return ResultadoSync.SinSesion
         return try {
             val catalogo = bajarCatalogo()
+            // Las altas en terreno van ANTES: las asistencias de un asistente nuevo esperan a que se confirme.
+            val asistentesNuevos = subirAsistentesNuevos()
             val asistencias = subirAsistencias(sub)
             val encuestas = subirEncuestas(sub)
             prefs.registrarSincronizacion(reloj.ahoraMillis())
-            ResultadoSync.Completa(ResumenSync(catalogo, asistencias, encuestas))
+            ResultadoSync.Completa(ResumenSync(catalogo, asistencias, encuestas, asistentesNuevos))
         } catch (e: HttpException) {
             if (e.code() == 401) {
                 // Si la sesión sigue ahí, el 401 vino de no poder renovar el token por falta de red.
@@ -124,6 +138,74 @@ class SyncEngine(
             asistenciaDao.reintentarPorReferencias()
         }
         return ResumenCatalogo(proyectos.size, eventos.size, asistentes.size)
+    }
+
+    // ------------------------------------------------------------------ asistentes dados de alta en terreno
+
+    /**
+     * Sube las altas de asistentes (caso §3.1) y reemplaza cada asistente PROVISIONAL (id negativo) por el real que
+     * asigna el servidor. No depende de qué usuario subió: el servidor no atribuye el alta a nadie.
+     *
+     * ACEPTADO y DUPLICADO traen el id y código reales (un reenvío tras perder la respuesta devuelve los mismos).
+     * Con ellos se reasignan las asistencias que apuntaban al provisional y se borra la fila provisional, todo en
+     * una transacción: nunca queda una asistencia apuntando a un asistente que ya no existe. La fila definitiva no
+     * lleva el uuid: ya cumplió su función, y repetirlo chocaría con el índice único mientras exista la provisional.
+     */
+    private suspend fun subirAsistentesNuevos(): ResumenLote {
+        var sincronizados = 0
+        var fallidos = 0
+        val pendientes = catalogoDao.asistentesPendientes()
+
+        for (lote in pendientes.chunked(TAMANO_LOTE)) {
+            val respuesta = api.subirAsistentes(SincronizarAsistentesRequest(lote.map(AsistenteEntity::aDto)))
+            val resultados = respuesta.data?.resultados
+            if (!respuesta.success || resultados == null) throw RespuestaInvalidaException()
+
+            for (resultado in resultados) {
+                val provisional = encontrarAsistente(lote, resultado) ?: continue
+                when (resultado.estado) {
+                    ESTADO_ACEPTADO, ESTADO_DUPLICADO -> {
+                        val idReal = resultado.id
+                        val codigoReal = resultado.codigo
+                        if (idReal == null || codigoReal == null) continue // respuesta incompleta: se reintenta
+                        reemplazarProvisional(provisional, idReal, codigoReal)
+                        sincronizados++
+                    }
+                    ESTADO_RECHAZADO -> {
+                        catalogoDao.marcarAsistenteFallido(provisional.id, motivoDeAsistente(resultado))
+                        fallidos++
+                    }
+                }
+            }
+        }
+        return ResumenLote(sincronizados, fallidos, pendientes = pendientes.size - sincronizados - fallidos)
+    }
+
+    private suspend fun reemplazarProvisional(provisional: AsistenteEntity, idReal: Long, codigoReal: String) {
+        transaccion.ejecutar {
+            catalogoDao.upsertAsistentes(
+                listOf(
+                    AsistenteEntity(
+                        id = idReal,
+                        codigo = codigoReal,
+                        tipo = provisional.tipo,
+                        estadoInscripcion = provisional.estadoInscripcion,
+                        estadoSync = EstadoSync.SINCRONIZADO,
+                    ),
+                ),
+            )
+            asistenciaDao.reasignarAsistente(provisional.id, idReal)
+            catalogoDao.eliminarAsistente(provisional.id)
+        }
+    }
+
+    private fun encontrarAsistente(lote: List<AsistenteEntity>, resultado: ResultadoAsistenteDto): AsistenteEntity? =
+        resultado.uuid?.let { u -> lote.firstOrNull { it.uuid == u } }
+            ?: resultado.indice?.let { lote.getOrNull(it) }
+
+    private fun motivoDeAsistente(resultado: ResultadoAsistenteDto): String {
+        val motivo = resultado.motivo ?: ESTADO_RECHAZADO
+        return resultado.detalle?.takeIf { it.isNotBlank() }?.let { "$motivo: $it" } ?: motivo
     }
 
     // ------------------------------------------------------------------ asistencias

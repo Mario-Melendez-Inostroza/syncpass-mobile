@@ -5,11 +5,15 @@ import com.android.syncpass.core.GeneradorUuid
 import com.android.syncpass.core.Reloj
 import com.android.syncpass.core.network.ApiResponse
 import com.android.syncpass.core.network.CatalogoDto
+import com.android.syncpass.core.network.LoteAsistentesDto
 import com.android.syncpass.core.network.LoteSyncDto
+import com.android.syncpass.core.network.ResultadoAsistenteDto
 import com.android.syncpass.core.network.ResumenEventoDto
 import com.android.syncpass.core.network.SincronizarAsistenciasRequest
+import com.android.syncpass.core.network.SincronizarAsistentesRequest
 import com.android.syncpass.core.network.SincronizarEncuestasRequest
 import com.android.syncpass.core.network.SyncPassApi
+import com.android.syncpass.data.Transaccion
 import com.android.syncpass.data.local.AsistenciaConAsistente
 import com.android.syncpass.data.local.AsistenciaDao
 import com.android.syncpass.data.local.AsistenciaEntity
@@ -35,7 +39,37 @@ class FakeCatalogoDao : CatalogoDao {
 
     override suspend fun upsertProyectos(proyectos: List<ProyectoEntity>) = proyectos.forEach { this.proyectos[it.id] = it }
     override suspend fun upsertEventos(eventos: List<EventoEntity>) = eventos.forEach { this.eventos[it.id] = it }
-    override suspend fun upsertAsistentes(asistentes: List<AsistenteEntity>) = asistentes.forEach { this.asistentes[it.id] = it }
+    override suspend fun upsertAsistentes(asistentes: List<AsistenteEntity>) = asistentes.forEach { nuevo ->
+        // Igual que Room: un upsert por id que repite el código o el uuid de OTRA fila viola el índice único.
+        validarUnicos(nuevo)
+        this.asistentes[nuevo.id] = nuevo
+    }
+
+    private fun validarUnicos(nuevo: AsistenteEntity) {
+        val choca = asistentes.values.any {
+            it.id != nuevo.id && (it.codigo == nuevo.codigo || (nuevo.uuid != null && it.uuid == nuevo.uuid))
+        }
+        if (choca) throw SQLiteConstraintException("UNIQUE constraint failed: asistentes")
+    }
+
+    override suspend fun insertarAsistente(asistente: AsistenteEntity) {
+        if (asistentes.containsKey(asistente.id)) throw SQLiteConstraintException("UNIQUE constraint failed: asistentes.id")
+        validarUnicos(asistente)
+        asistentes[asistente.id] = asistente
+    }
+
+    override suspend fun siguienteIdProvisional(): Long = (asistentes.keys.filter { it < 0 }.minOrNull() ?: 0L) - 1
+
+    override suspend fun asistentesPendientes() =
+        asistentes.values.filter { it.id < 0 && it.estadoSync == EstadoSync.PENDIENTE }.sortedByDescending { it.id }
+
+    override suspend fun marcarAsistenteFallido(id: Long, motivo: String) {
+        asistentes[id]?.let { asistentes[id] = it.copy(estadoSync = EstadoSync.FALLIDO, motivoFallo = motivo) }
+    }
+
+    override suspend fun eliminarAsistente(id: Long) {
+        asistentes.remove(id)
+    }
 
     override fun observarEventos(): Flow<List<EventoConProyecto>> =
         flowOf(eventos.values.map { EventoConProyecto(it, proyectos[it.proyectoId]?.titulo) })
@@ -69,7 +103,17 @@ class FakeAsistenciaDao : AsistenciaDao {
     }
 
     override suspend fun pendientes(sub: String) =
-        filas.values.filter { it.estadoSync == EstadoSync.PENDIENTE && it.usuarioSub == sub }.sortedBy { it.marcadoEnMillis }
+        filas.values.filter { it.estadoSync == EstadoSync.PENDIENTE && it.usuarioSub == sub && it.asistenteId > 0 }
+            .sortedBy { it.marcadoEnMillis }
+
+    override suspend fun reasignarAsistente(provisional: Long, real: Long) {
+        filas.values.filter { it.asistenteId == provisional }.forEach { fila ->
+            // Igual que Room: no puede haber dos marcaciones del mismo asistente en un evento.
+            val choca = filas.values.any { it.uuid != fila.uuid && it.eventoId == fila.eventoId && it.asistenteId == real }
+            if (choca) throw SQLiteConstraintException("UNIQUE constraint failed: asistencias")
+            filas[fila.uuid] = fila.copy(asistenteId = real)
+        }
+    }
 
     private fun actualizar(uuid: String, cambio: (AsistenciaEntity) -> AsistenciaEntity) {
         filas[uuid]?.let { filas[uuid] = cambio(it) }
@@ -180,6 +224,15 @@ class FakeSyncApi : SyncPassApi {
         return alCatalogo(desde)
     }
 
+    val lotesAsistentes = mutableListOf<SincronizarAsistentesRequest>()
+    var alSubirAsistentes: (SincronizarAsistentesRequest) -> ApiResponse<LoteAsistentesDto> = { respuestaAsistentes(emptyList()) }
+
+    override suspend fun subirAsistentes(request: SincronizarAsistentesRequest): ApiResponse<LoteAsistentesDto> {
+        llamadas += "asistentes"
+        lotesAsistentes += request
+        return alSubirAsistentes(request)
+    }
+
     override suspend fun subirAsistencias(request: SincronizarAsistenciasRequest): ApiResponse<LoteSyncDto> {
         llamadas += "asistencias"
         lotesAsistencias += request
@@ -215,4 +268,37 @@ class RelojFijo(var ahora: Long = 1_793_199_851_000L) : Reloj {
 class UuidSecuencial : GeneradorUuid {
     private var n = 0
     override fun nuevo() = "uuid-${++n}"
+}
+
+fun respuestaAsistentes(resultados: List<ResultadoAsistenteDto>) = ApiResponse(
+    success = true,
+    data = LoteAsistentesDto(
+        aceptados = resultados.count { it.estado == "ACEPTADO" },
+        duplicados = resultados.count { it.estado == "DUPLICADO" },
+        rechazados = resultados.count { it.estado == "RECHAZADO" },
+        resultados = resultados,
+    ),
+)
+
+/**
+ * Transacción de mentira con reversión: si el bloque falla, restaura lo que tenían las tablas en memoria, como
+ * haría Room. Sirve para probar que dos escrituras quedan juntas o no queda ninguna.
+ */
+class TransaccionConReversion(
+    private val catalogo: FakeCatalogoDao,
+    private val asistencias: FakeAsistenciaDao,
+) : Transaccion {
+    override suspend fun <T> ejecutar(bloque: suspend () -> T): T {
+        val asistentesAntes = LinkedHashMap(catalogo.asistentes)
+        val asistenciasAntes = LinkedHashMap(asistencias.filas)
+        try {
+            return bloque()
+        } catch (e: Throwable) {
+            catalogo.asistentes.clear()
+            catalogo.asistentes.putAll(asistentesAntes)
+            asistencias.filas.clear()
+            asistencias.filas.putAll(asistenciasAntes)
+            throw e
+        }
+    }
 }

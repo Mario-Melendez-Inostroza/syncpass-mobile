@@ -16,6 +16,7 @@ sesión contra el backend, que es quien se entiende con Cognito.
 | Descarga periódica de proyectos y eventos (§3.4) | `GET /api/sync/catalogo?desde=` incremental, al abrir y cada 15 min |
 | Bandera de sincronización y marcas de tiempo (§3.2, §3.4) | `estadoSync` (PENDIENTE / SINCRONIZADO / FALLIDO) y `marcadoEnMillis` del reloj del dispositivo |
 | GPS **referencial** (§3.3) | `FusedUbicacionProvider`; si no hay permiso o señal, se registra igual (el servidor lo clasifica `SIN_UBICACION`) |
+| Alta de quien llega **sin inscripción previa** (§3.1) | "Agregar persona sin inscripción" en la lista: eligiendo Estudiante, Vecino o Docente, la persona queda creada y marcada en un solo paso, también sin conexión. Nace con un id provisional negativo y se reemplaza por el real al sincronizar (`SyncEngine`); sin ningún dato personal |
 | Encuesta inmediata, escala 1 a 5 (§2.4, §3.2) | `EncuestaScreen`: satisfacción, utilidad y comentarios |
 | Avisos visuales inmediatos (§3.3) | Aviso en pantalla tras cada acción, banner de pendientes y notificación al terminar de sincronizar |
 | Autenticación por roles (§3.4) | Grupos de Cognito **COORDINADOR** y **MONITOR** (`cognito:groups`) |
@@ -83,8 +84,9 @@ Desde la terminal:
 Sin `-PSYNCPASS_API_URL`, el release apunta a `https://api-gateway.syncpass.invalid/` a propósito: falla de forma
 evidente en lugar de apuntar a un dominio que parezca real.
 
-En un teléfono físico la URL de debug no sirve (`10.0.2.2` es solo del emulador). Hace falta el backend desplegado
-y compilar con `-PSYNCPASS_API_URL`.
+En un teléfono físico la URL de debug por defecto no sirve (`10.0.2.2` es solo del emulador). Para apuntar al API
+Gateway sin tocar el código, define `SYNCPASS_API_URL=https://<api-gateway>/` en `~/.gradle/gradle.properties`
+(o pásalo con `-PSYNCPASS_API_URL`). Lo respetan las compilaciones debug y release.
 
 ## Contrato con el backend
 
@@ -97,6 +99,7 @@ Todas las respuestas correctas vienen en `{success, data, message, timestamp}`; 
 | `POST api/auth/refresh` | `{refreshToken, email}`; el backend reenvía el refresh token (Cognito no lo rota) |
 | `POST api/auth/logout` | revoca el refresh token |
 | `GET api/sync/catalogo?desde=` | proyectos, eventos y asistentes; `desde` es el `servidorEn` anterior |
+| `POST api/sync/asistentes` | altas en terreno: `{registros:[{uuid, tipo}]}` → por cada una `id` y `codigo` reales (`TER-…`). Se sube **antes** que las asistencias |
 | `POST api/sync/asistencias` | `{registros:[{uuid, eventoId, asistenteId, marcadoEn, latitud?, longitud?}]}` |
 | `POST api/sync/encuestas` | `{registros:[{uuid, asistenciaUuid, satisfaccion, utilidad, comentarios?, enviadaEn}]}` |
 | `GET api/eventos/{id}/resumen` | quórum (solo COORDINADOR) |
@@ -106,13 +109,16 @@ resto. Los nombres de campo se comprobaron mecánicamente contra los DTO del bac
 
 ## Pruebas
 
-104 pruebas unitarias, 0 fallos. Cubren, sin emulador:
+131 pruebas unitarias, 0 fallos. Cubren, sin emulador:
 
 - **Autenticación** (`AuthFlowTest`): login, errores del backend, rol inválido, y los cinco escenarios de renovación
   de token contra un servidor simulado (renueva y repite, sesión terminada, sin red, error 500, sin bucle).
 - **Contrato** (`SyncApiContractTest`): el JSON exacto que la app envía y recibe.
 - **Sincronización** (`SyncEngineTest`, 30 casos): idempotencia, lotes parciales, cortes de red a mitad, orden
   asistencias→encuestas, usuario con sesión, reapertura de fallidos tras un catálogo nuevo.
+- **Alta en terreno** (27 casos): alta y marcación atómicas (si falla una, no queda la otra), ids provisionales
+  distintos, reemplazo por el id real con sus asistencias, reenvío tras perder la respuesta, alta rechazada, y el
+  JSON exacto del endpoint nuevo.
 - **Reglas de registro**, **ViewModels** (antirrebote del QR, login, sesión, quórum), **QR** y **JWT**.
 
 Se comprobó, rompiendo la regla a propósito, que las pruebas del motor detectan que `DUPLICADO` deje de contar
@@ -120,24 +126,29 @@ como sincronizado.
 
 ## Lo que NO está comprobado
 
-Todo lo anterior es verificación **sin dispositivo**. Compila, empaqueta (debug y release), pasa lint sin errores
-y la lógica está probada, pero **nada se ha ejecutado todavía en un emulador ni en un teléfono**. Sin probar
-queda, por lo tanto, lo que solo existe en ejecución:
+Las pruebas unitarias son verificación **sin dispositivo**. Además, la versión anterior a la alta en terreno se
+probó a mano en un teléfono físico (Xiaomi 23090RA98G) contra el backend y Cognito reales: inicio de sesión como
+monitor, descarga del catálogo, marcación en modo avión, envío automático con notificación al volver el Wi-Fi, y la
+marcación visible en el panel web (clasificada "fuera del radio", lo que confirma que el GPS envió coordenadas).
 
+**Sin probar todavía en un teléfono**:
+
+- La **alta en terreno** ("Agregar persona sin inscripción") y su reemplazo por el id real: solo hay pruebas unitarias.
+- La **migración de Room v1 → v2**: `MigracionRoomTest` está escrita y compila, pero es instrumentada y necesita un
+  teléfono o emulador conectado (`./gradlew :app:connectedDebugAndroidTest`); no se ha ejecutado.
 - La **cámara y la lectura real del QR** (CameraX + ML Kit) y su permiso.
-- El **GPS** y los permisos de ubicación y de notificaciones.
-- **WorkManager** reaccionando al volver la red, y el modo avión de punta a punta.
 - **Android Keystore** (en la JVM se sustituye por un doble).
 - **La apariencia**: diseño, modo oscuro, tamaños en pantallas pequeñas.
-- **Room con SQLite real**: las consultas se validan al compilar (KSP), pero no se ejecutaron.
-- El flujo completo contra el **backend y Cognito reales**.
 
-Prueba mínima recomendada en el emulador: iniciar sesión → sincronizar → marcar un asistente (por lista y por QR) →
-activar modo avión → marcar otro → comprobar "pendiente" → desactivar modo avión → comprobar que pasa a "Enviado".
+Prueba mínima recomendada para lo nuevo: sincronizar → lista de asistentes → "Agregar persona sin inscripción" →
+elegir un tipo → comprobar que queda marcada y "pendiente de enviar" → con red, comprobar que su código pasa de
+`NUEVO-…` a `TER-…` y que aparece en el panel web.
 
 ## Pendiente
 
-- Probar en emulador y dispositivo (arriba).
+- Probar lo nuevo en dispositivo (arriba) y ejecutar `MigracionRoomTest`.
+- Un alta rechazada por el servidor deja sus asistencias esperando sin avisar al usuario (no debería ocurrir: el
+  tipo y el uuid los controla la app).
 - Un `network_security_config` y la URL de release reales cuando exista API Gateway.
 - Aviso de notificación cuando haya registros rechazados.
 - Los textos están escritos en el código; para internacionalizar habría que moverlos a `strings.xml`.

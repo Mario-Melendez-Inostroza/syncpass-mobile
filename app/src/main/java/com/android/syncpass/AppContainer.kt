@@ -14,6 +14,7 @@ import com.android.syncpass.core.auth.KeystoreSecretCipher
 import com.android.syncpass.core.auth.TokenStorage
 import com.android.syncpass.core.network.NetworkFactory
 import com.android.syncpass.data.RegistroRepository
+import com.android.syncpass.data.RoomTransaccion
 import com.android.syncpass.data.local.AppDatabase
 import com.android.syncpass.sync.DataStoreSyncPrefs
 import com.android.syncpass.sync.SyncEngine
@@ -55,6 +56,7 @@ class AppContainer(contexto: Context) {
             encuestaDao = baseDeDatos.encuestaDao(),
             reloj = Reloj.Sistema,
             uuid = GeneradorUuid.Aleatorio,
+            transaccion = RoomTransaccion(baseDeDatos),
         )
     }
 
@@ -71,6 +73,7 @@ class AppContainer(contexto: Context) {
             prefs = syncPrefs,
             subActual = { authRepository.usuarioActual()?.sub },
             reloj = Reloj.Sistema,
+            transaccion = RoomTransaccion(baseDeDatos),
         )
     }
 }

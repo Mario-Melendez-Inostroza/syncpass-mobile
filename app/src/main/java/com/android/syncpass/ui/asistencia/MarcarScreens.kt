@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -41,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.syncpass.core.Reloj
+import com.android.syncpass.data.RegistroRepository
+import com.android.syncpass.data.local.EstadoSync
+import com.android.syncpass.ui.componentes.AltoBoton
 import com.android.syncpass.ui.componentes.BotonPrimario
 import com.android.syncpass.ui.componentes.CamaraEscaner
 import com.android.syncpass.ui.componentes.EstadoVacio
@@ -171,6 +178,7 @@ fun ListaAsistentesScreen(
     val ultimo by vm.ultimo.collectAsStateWithLifecycle()
     var filtro by rememberSaveable { mutableStateOf("") }
     var porConfirmar by remember { mutableStateOf<AsistenteItem?>(null) }
+    var mostrarAlta by remember { mutableStateOf(false) }
 
     val visibles = remember(asistentes, filtro) {
         asistentes.filter { it.asistente.codigo.contains(filtro.trim(), ignoreCase = true) }
@@ -186,6 +194,15 @@ fun ListaAsistentesScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
+            // Caso §3.1: quien llega sin inscripción previa se da de alta aquí mismo, sin papel y sin conexión.
+            OutlinedButton(
+                onClick = { mostrarAlta = true },
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).heightIn(min = AltoBoton),
+            ) {
+                Icon(Icons.Default.PersonAdd, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Agregar persona sin inscripción")
+            }
             ultimo?.let { TarjetaResultado(it, onEncuesta, Modifier.padding(horizontal = 16.dp)) }
 
             if (visibles.isEmpty()) {
@@ -211,7 +228,12 @@ fun ListaAsistentesScreen(
                                     Text(item.asistente.codigo, style = MaterialTheme.typography.titleMedium)
                                     Text(
                                         "${item.asistente.tipo.lowercase().replaceFirstChar { it.uppercase() }} · " +
-                                            if (item.asistente.estadoInscripcion == "INSCRITO") "Inscrito" else "Sin inscripción",
+                                            (if (item.asistente.estadoInscripcion == "INSCRITO") "Inscrito" else "Sin inscripción") +
+                                            when {
+                                                item.asistente.estadoSync == EstadoSync.FALLIDO -> " · Rechazado"
+                                                item.asistente.esProvisional -> " · Pendiente de enviar"
+                                                else -> ""
+                                            },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -225,6 +247,33 @@ fun ListaAsistentesScreen(
                 }
             }
         }
+    }
+
+    if (mostrarAlta) {
+        AlertDialog(
+            onDismissRequest = { mostrarAlta = false },
+            title = { Text("Persona sin inscripción") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Elige qué tipo de persona es. Queda registrada y marcada como presente. " +
+                            "No se guarda ningún dato personal.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    RegistroRepository.TIPOS_ASISTENTE.forEach { tipo ->
+                        OutlinedButton(
+                            onClick = {
+                                mostrarAlta = false
+                                vm.altaYMarcar(tipo)
+                            },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = AltoBoton),
+                        ) { Text(tipo.lowercase().replaceFirstChar { it.uppercase() }) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { mostrarAlta = false }) { Text("Cancelar") } },
+        )
     }
 
     porConfirmar?.let { item ->

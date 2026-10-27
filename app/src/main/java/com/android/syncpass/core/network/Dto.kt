@@ -96,6 +96,37 @@ data class AsistenciaSyncDto(
 
 data class SincronizarAsistenciasRequest(val registros: List<AsistenciaSyncDto>)
 
+/**
+ * Un asistente dado de alta en terreno (caso §3.1). Solo el uuid del teléfono y el tipo: el código sintético y la
+ * condición de "sin inscripción" los decide el servidor. Sin datos personales (caso §5.1).
+ */
+data class AsistenteSyncDto(
+    val uuid: String,
+    /** ESTUDIANTE, VECINO o DOCENTE. */
+    val tipo: String,
+)
+
+data class SincronizarAsistentesRequest(val registros: List<AsistenteSyncDto>)
+
+data class LoteAsistentesDto(
+    val aceptados: Int? = null,
+    val duplicados: Int? = null,
+    val rechazados: Int? = null,
+    val resultados: List<ResultadoAsistenteDto>? = null,
+)
+
+/** A diferencia de [ResultadoSyncDto], trae el id y el código REALES que el servidor asignó. */
+data class ResultadoAsistenteDto(
+    val indice: Int? = null,
+    val uuid: String? = null,
+    /** ACEPTADO, DUPLICADO o RECHAZADO. */
+    val estado: String? = null,
+    val motivo: String? = null,
+    val id: Long? = null,
+    val codigo: String? = null,
+    val detalle: String? = null,
+)
+
 data class EncuestaSyncDto(
     val uuid: String,
     val asistenciaUuid: String,

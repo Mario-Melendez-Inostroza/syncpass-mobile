@@ -35,6 +35,10 @@ interface SyncPassApi {
     @GET("api/sync/catalogo")
     suspend fun catalogo(@Query("desde") desde: String?): ApiResponse<CatalogoDto>
 
+    /** Altas de asistentes llegados sin inscripción. Se suben ANTES que las asistencias que los usan. */
+    @POST("api/sync/asistentes")
+    suspend fun subirAsistentes(@Body request: SincronizarAsistentesRequest): ApiResponse<LoteAsistentesDto>
+
     @POST("api/sync/asistencias")
     suspend fun subirAsistencias(@Body request: SincronizarAsistenciasRequest): ApiResponse<LoteSyncDto>
 
