@@ -205,3 +205,13 @@ elegir un tipo → comprobar que queda marcada y "pendiente de enviar" → con r
 - Un `network_security_config` y la URL de release reales cuando exista API Gateway.
 - Aviso de notificación cuando haya registros rechazados.
 - Los textos están escritos en el código; para internacionalizar habría que moverlos a `strings.xml`.
+
+## Equipo
+
+Proyecto del curso DSY1105 · Desarrollo de Aplicaciones Móviles · Duoc UC.
+
+| Integrante | GitHub | Aporte en este repositorio |
+|---|---|---|
+| Mario Meléndez | [Mario-Melendez-Inostroza](https://github.com/Mario-Melendez-Inostroza) | Desarrollo e integración del sistema |
+| _(nombre completo)_ | [bx1423](https://github.com/bx1423) | _(completar: qué aportó o revisó)_ |
+| _(nombre completo)_ | [Monnacohu](https://github.com/Monnacohu) | _(completar: qué aportó o revisó)_ |
