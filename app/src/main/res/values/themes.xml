@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ventana en modo claro. En modo oscuro la sustituye values-night (caso 3.3: claro y oscuro). -->
+    <style name="Theme.SyncPass" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

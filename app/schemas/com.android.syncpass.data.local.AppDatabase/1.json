@@ -1,0 +1,397 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "7b67257a3d5caa806d9a60eec098e830",
+    "entities": [
+      {
+        "tableName": "proyectos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `titulo` TEXT NOT NULL, `descripcion` TEXT, `areaTematica` TEXT NOT NULL, `unidadVecinal` TEXT NOT NULL, `fechaInicio` TEXT NOT NULL, `fechaTermino` TEXT, `estado` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descripcion",
+            "columnName": "descripcion",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "areaTematica",
+            "columnName": "areaTematica",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unidadVecinal",
+            "columnName": "unidadVecinal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaInicio",
+            "columnName": "fechaInicio",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaTermino",
+            "columnName": "fechaTermino",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "estado",
+            "columnName": "estado",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "eventos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `proyectoId` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `fechaHoraProgramada` TEXT NOT NULL, `cuposMaximos` INTEGER, `recinto` TEXT, `latitud` REAL, `longitud` REAL, `radioMetros` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proyectoId",
+            "columnName": "proyectoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaHoraProgramada",
+            "columnName": "fechaHoraProgramada",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cuposMaximos",
+            "columnName": "cuposMaximos",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "recinto",
+            "columnName": "recinto",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "latitud",
+            "columnName": "latitud",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "longitud",
+            "columnName": "longitud",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "radioMetros",
+            "columnName": "radioMetros",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_eventos_proyectoId",
+            "unique": false,
+            "columnNames": [
+              "proyectoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_eventos_proyectoId` ON `${TABLE_NAME}` (`proyectoId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "asistentes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `codigo` TEXT NOT NULL, `tipo` TEXT NOT NULL, `estadoInscripcion` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codigo",
+            "columnName": "codigo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoInscripcion",
+            "columnName": "estadoInscripcion",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asistentes_codigo",
+            "unique": true,
+            "columnNames": [
+              "codigo"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asistentes_codigo` ON `${TABLE_NAME}` (`codigo`)"
+          }
+        ]
+      },
+      {
+        "tableName": "asistencias",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `eventoId` INTEGER NOT NULL, `asistenteId` INTEGER NOT NULL, `marcadoEnMillis` INTEGER NOT NULL, `latitud` REAL, `longitud` REAL, `usuarioSub` TEXT NOT NULL, `estadoSync` TEXT NOT NULL, `motivoFallo` TEXT, `servidorId` INTEGER, `estadoValidacion` TEXT, `distanciaMetros` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eventoId",
+            "columnName": "eventoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asistenteId",
+            "columnName": "asistenteId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marcadoEnMillis",
+            "columnName": "marcadoEnMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitud",
+            "columnName": "latitud",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "longitud",
+            "columnName": "longitud",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "usuarioSub",
+            "columnName": "usuarioSub",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "motivoFallo",
+            "columnName": "motivoFallo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "servidorId",
+            "columnName": "servidorId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "estadoValidacion",
+            "columnName": "estadoValidacion",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "distanciaMetros",
+            "columnName": "distanciaMetros",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asistencias_eventoId_asistenteId",
+            "unique": true,
+            "columnNames": [
+              "eventoId",
+              "asistenteId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asistencias_eventoId_asistenteId` ON `${TABLE_NAME}` (`eventoId`, `asistenteId`)"
+          },
+          {
+            "name": "index_asistencias_estadoSync",
+            "unique": false,
+            "columnNames": [
+              "estadoSync"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asistencias_estadoSync` ON `${TABLE_NAME}` (`estadoSync`)"
+          },
+          {
+            "name": "index_asistencias_usuarioSub",
+            "unique": false,
+            "columnNames": [
+              "usuarioSub"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asistencias_usuarioSub` ON `${TABLE_NAME}` (`usuarioSub`)"
+          }
+        ]
+      },
+      {
+        "tableName": "encuestas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `asistenciaUuid` TEXT NOT NULL, `satisfaccion` INTEGER NOT NULL, `utilidad` INTEGER NOT NULL, `comentarios` TEXT, `enviadaEnMillis` INTEGER NOT NULL, `usuarioSub` TEXT NOT NULL, `estadoSync` TEXT NOT NULL, `motivoFallo` TEXT, `servidorId` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asistenciaUuid",
+            "columnName": "asistenciaUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "satisfaccion",
+            "columnName": "satisfaccion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "utilidad",
+            "columnName": "utilidad",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comentarios",
+            "columnName": "comentarios",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "enviadaEnMillis",
+            "columnName": "enviadaEnMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioSub",
+            "columnName": "usuarioSub",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "motivoFallo",
+            "columnName": "motivoFallo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "servidorId",
+            "columnName": "servidorId",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_encuestas_asistenciaUuid",
+            "unique": true,
+            "columnNames": [
+              "asistenciaUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_encuestas_asistenciaUuid` ON `${TABLE_NAME}` (`asistenciaUuid`)"
+          },
+          {
+            "name": "index_encuestas_estadoSync",
+            "unique": false,
+            "columnNames": [
+              "estadoSync"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_encuestas_estadoSync` ON `${TABLE_NAME}` (`estadoSync`)"
+          },
+          {
+            "name": "index_encuestas_usuarioSub",
+            "unique": false,
+            "columnNames": [
+              "usuarioSub"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_encuestas_usuarioSub` ON `${TABLE_NAME}` (`usuarioSub`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7b67257a3d5caa806d9a60eec098e830')"
+    ]
+  }
+}
