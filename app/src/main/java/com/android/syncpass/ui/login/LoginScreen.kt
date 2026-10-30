@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.android.syncpass.core.auth.AuthRepository
 import com.android.syncpass.ui.componentes.BotonPrimario
+import com.android.syncpass.ui.componentes.EncabezadoMarca
 import com.android.syncpass.ui.viewModelDe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,20 +95,21 @@ fun LoginScreen(onCrearCuenta: () -> Unit = {}) {
     var verPassword by rememberSaveable { mutableStateOf(false) }
     val foco = LocalFocusManager.current
 
-    Surface(Modifier.fillMaxSize()) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.imePadding().verticalScroll(rememberScrollState())) {
+        EncabezadoMarca("Registro de asistencia en terreno, con o sin conexión")
         Column(
-            Modifier.systemBarsPadding().imePadding().padding(24.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
+            Modifier.navigationBarsPadding().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(48.dp))
-            Text("SyncPass", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+            Text("Iniciar sesión", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth())
             Text(
-                "Registro de asistencia en terreno, con o sin conexión",
+                "Entra con tu correo y contraseña",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(20.dp))
 
             OutlinedTextField(
                 value = ui.email,
@@ -160,6 +162,7 @@ fun LoginScreen(onCrearCuenta: () -> Unit = {}) {
             androidx.compose.material3.TextButton(onClick = onCrearCuenta, enabled = !ui.cargando) {
                 Text("Soy asistente · Crear mi cuenta")
             }
+        }
         }
     }
 }

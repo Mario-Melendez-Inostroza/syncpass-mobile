@@ -157,7 +157,7 @@ genera la implementación; en las pruebas se sustituyen por dobles, sin servidor
 | Avisos visuales inmediatos (§3.3) | Aviso en pantalla tras cada acción, banner de pendientes y notificación al terminar de sincronizar |
 | Autenticación por roles (§3.4) | Grupos de Cognito **COORDINADOR**, **MONITOR** y **ASISTENTE** (`cognito:groups`) |
 | Quórum en vivo (§2.4, §4.1) | `ResumenScreen` (solo COORDINADOR; el servidor lo hace cumplir con un 403) |
-| Claro/oscuro, botones grandes, una mano (§3.3) | Material 3; botones principales de 56 dp; mínimo táctil de 48 dp |
+| Claro/oscuro, botones grandes, una mano (§3.3) | Material 3 con la paleta azul de la marca (la misma de la web). Claro por defecto; el **modo oscuro**, en azul marino, se activa en Perfil y se recuerda. Botones principales de 56 dp; mínimo táctil de 48 dp |
 | Android 8.0 (API 26) o superior (§5.1) | `minSdk = 26` |
 | Sin datos personales reales (§5.1) | El asistente es un código sintético; el QR solo lleva `ASISTENTE_{id}` |
 

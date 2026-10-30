@@ -41,6 +41,15 @@ object Formato {
 
     fun horaMillis(millis: Long): String = hora.format(Instant.ofEpochMilli(millis))
 
+    private val dia = DateTimeFormatter.ofPattern("dd", Locale("es", "CL")).withZone(ZoneId.systemDefault())
+    private val mes = DateTimeFormatter.ofPattern("MMM", Locale("es", "CL")).withZone(ZoneId.systemDefault())
+
+    /** Día y mes abreviado ("05", "NOV") para la insignia de fecha de un evento; "—" si la fecha no es válida. */
+    fun diaMes(iso: String?): Pair<String, String> = runCatching {
+        val instante = Instant.parse(iso)
+        dia.format(instante) to mes.format(instante).uppercase().trimEnd('.')
+    }.getOrDefault("—" to "")
+
     fun decimal(valor: Double?): String = valor?.let { String.format(Locale("es", "CL"), "%.1f", it) } ?: "—"
 }
 

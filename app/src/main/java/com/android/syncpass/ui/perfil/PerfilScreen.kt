@@ -1,6 +1,10 @@
 package com.android.syncpass.ui.perfil
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Switch
+import androidx.compose.ui.Alignment
+import com.android.syncpass.ui.LocalContenedor
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -75,6 +79,26 @@ fun PerfilScreen(usuario: UserInfo, barraInferior: @Composable () -> Unit) {
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                }
+            }
+
+            val contenedor = LocalContenedor.current
+            val oscuro by contenedor.temaPrefs.oscuro.collectAsStateWithLifecycle()
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Modo oscuro", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Útil de noche o con poca luz",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = oscuro, onCheckedChange = contenedor.temaPrefs::cambiar)
                 }
             }
 

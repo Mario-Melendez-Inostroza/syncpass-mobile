@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -67,6 +67,7 @@ import com.android.syncpass.core.qr.CodigoQr
 import com.android.syncpass.core.qr.QrBitmap
 import com.android.syncpass.ui.Formato
 import com.android.syncpass.ui.componentes.BotonPrimario
+import com.android.syncpass.ui.componentes.EncabezadoMarca
 import com.android.syncpass.ui.componentes.EstadoVacio
 import com.android.syncpass.ui.componentes.PantallaBase
 import com.android.syncpass.ui.perfil.PerfilScreen
@@ -129,20 +130,15 @@ fun RegistroScreen(onVolver: () -> Unit) {
     val vm = viewModelDe { RegistroViewModel(it.authRepository) }
     val ui by vm.ui.collectAsStateWithLifecycle()
 
-    Surface(Modifier.fillMaxSize()) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.imePadding().verticalScroll(rememberScrollState())) {
+        EncabezadoMarca("Crea tu cuenta para ver los talleres, inscribirte y mostrar tu código QR al llegar")
         Column(
-            Modifier.systemBarsPadding().imePadding().padding(24.dp).verticalScroll(rememberScrollState()),
+            Modifier.navigationBarsPadding().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(32.dp))
-            Text("Crear mi cuenta", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-            Text(
-                "Para ver los talleres, inscribirte y mostrar tu código QR al llegar.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
+            Text("Crear mi cuenta", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = ui.email,
                 onValueChange = vm::onEmail,
@@ -189,6 +185,7 @@ fun RegistroScreen(onVolver: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             TextButton(onClick = onVolver, enabled = !ui.cargando) { Text("Ya tengo cuenta · Iniciar sesión") }
+        }
         }
     }
 }

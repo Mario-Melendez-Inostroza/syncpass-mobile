@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,6 +43,7 @@ import com.android.syncpass.ui.AccionSincronizar
 import com.android.syncpass.ui.Formato
 import com.android.syncpass.ui.componentes.BannerSync
 import com.android.syncpass.ui.componentes.EstadoVacio
+import com.android.syncpass.ui.componentes.InsigniaFecha
 import com.android.syncpass.ui.componentes.PantallaBase
 import com.android.syncpass.ui.viewModelDe
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -135,15 +137,22 @@ fun EventosScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(ui.eventos, key = { it.evento.id }) { fila ->
-                        Card(Modifier.fillMaxWidth().clickable { onEvento(fila.evento.id) }) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(fila.evento.nombre, style = MaterialTheme.typography.titleMedium)
-                                fila.proyectoTitulo?.let {
-                                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                                }
-                                Text(Formato.fechaHoraIso(fila.evento.fechaHoraProgramada), style = MaterialTheme.typography.bodyMedium)
-                                fila.evento.recinto?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Card(
+                            Modifier.fillMaxWidth().clickable { onEvento(fila.evento.id) },
+                            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 3.dp),
+                        ) {
+                            Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                val (dia, mes) = Formato.diaMes(fila.evento.fechaHoraProgramada)
+                                InsigniaFecha(dia, mes)
+                                Column(Modifier.weight(1f)) {
+                                    Text(fila.evento.nombre, style = MaterialTheme.typography.titleMedium)
+                                    fila.proyectoTitulo?.let {
+                                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    Text(Formato.fechaHoraIso(fila.evento.fechaHoraProgramada), style = MaterialTheme.typography.bodyMedium)
+                                    fila.evento.recinto?.let {
+                                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
                         }

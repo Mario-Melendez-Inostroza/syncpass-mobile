@@ -7,6 +7,7 @@ import com.android.syncpass.core.FusedUbicacionProvider
 import com.android.syncpass.core.GeneradorUuid
 import com.android.syncpass.core.Notificador
 import com.android.syncpass.core.Reloj
+import com.android.syncpass.core.TemaPrefs
 import com.android.syncpass.core.UbicacionProvider
 import com.android.syncpass.core.auth.AuthRepository
 import com.android.syncpass.core.auth.DataStoreTokenStorage
@@ -42,6 +43,8 @@ class AppContainer(contexto: Context) {
     val authRepository: AuthRepository by lazy { AuthRepository(red.authApi, red.sesionApi, tokenStorage) }
 
     val syncPrefs: SyncPrefs by lazy { DataStoreSyncPrefs(contextoApp) }
+
+    val temaPrefs: TemaPrefs by lazy { TemaPrefs(contextoApp) }
 
     val notificador: Notificador by lazy { AndroidNotificador(contextoApp) }
 

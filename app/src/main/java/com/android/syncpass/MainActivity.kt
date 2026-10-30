@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,7 +35,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val contenedor = (application as SyncPassApp).contenedor
         setContent {
-            SyncPassTheme {
+            val oscuro by contenedor.temaPrefs.oscuro.collectAsStateWithLifecycle()
+            SyncPassTheme(oscuro = oscuro) {
                 CompositionLocalProvider(LocalContenedor provides contenedor) {
                     Raiz()
                 }
@@ -53,7 +55,7 @@ private fun Raiz() {
     val estado by sesion.estado.collectAsStateWithLifecycle()
     val contenedor = LocalContenedor.current
 
-    Surface(Modifier.fillMaxSize()) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val actual = estado) {
             EstadoSesion.Cargando ->
                 Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center)) }

@@ -1,6 +1,21 @@
 package com.android.syncpass.ui.componentes
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.android.syncpass.R
+import com.android.syncpass.ui.theme.Azul500
+import com.android.syncpass.ui.theme.Azul600
+import com.android.syncpass.ui.theme.Azul700
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,7 +76,13 @@ fun PantallaBase(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(titulo, maxLines = 1) },
+                title = { Text(titulo, maxLines = 1, style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
                 navigationIcon = {
                     if (onAtras != null) {
                         IconButton(onClick = onAtras) {
@@ -184,6 +206,59 @@ fun BannerSync(
                     Icon(Icons.Default.Sync, contentDescription = "Sincronizar ahora")
                 }
             }
+        }
+    }
+}
+
+/**
+ * Cabecera de marca de las pantallas sin sesión: degradado azul de la web, el logo sobre una tarjeta blanca
+ * (así se lee igual en claro y en oscuro) y un lema.
+ */
+@Composable
+fun EncabezadoMarca(subtitulo: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
+            .background(Brush.verticalGradient(listOf(Azul700, Azul600, Azul500))),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Surface(shape = MaterialTheme.shapes.large, color = Color.White, shadowElevation = 6.dp) {
+                Image(
+                    painter = painterResource(R.drawable.logo_syncpass),
+                    contentDescription = "SyncPass",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.width(230.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
+            Spacer(Modifier.size(16.dp))
+            Text(
+                subtitulo,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** Recuadro con el día y el mes de un evento, como en el panel web. */
+@Composable
+fun InsigniaFecha(dia: String, mes: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Column(
+            Modifier.width(60.dp).padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(dia, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(mes, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
