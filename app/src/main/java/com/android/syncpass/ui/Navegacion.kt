@@ -2,6 +2,7 @@ package com.android.syncpass.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
@@ -22,6 +23,10 @@ import com.android.syncpass.ui.asistencia.ListaAsistentesScreen
 import com.android.syncpass.ui.coordinador.CredencialesScreen
 import com.android.syncpass.ui.coordinador.ResumenScreen
 import com.android.syncpass.ui.encuesta.EncuestaScreen
+import com.android.syncpass.ui.gestion.AsistentesGestionScreen
+import com.android.syncpass.ui.gestion.EventosGestionScreen
+import com.android.syncpass.ui.gestion.GestionScreen
+import com.android.syncpass.ui.gestion.ProyectosGestionScreen
 import com.android.syncpass.ui.eventos.EventoDetalleScreen
 import com.android.syncpass.ui.eventos.EventosScreen
 import com.android.syncpass.ui.perfil.PerfilScreen
@@ -33,6 +38,10 @@ object Rutas {
     const val SYNC = "sincronizacion"
     const val PERFIL = "perfil"
     const val CREDENCIALES = "credenciales"
+    const val GESTION = "gestion"
+    const val GESTION_PROYECTOS = "gestion/proyectos"
+    const val GESTION_EVENTOS = "gestion/eventos"
+    const val GESTION_ASISTENTES = "gestion/asistentes"
 
     const val ARG_EVENTO = "eventoId"
     const val ARG_ASISTENCIA = "asistenciaUuid"
@@ -58,10 +67,16 @@ private val pestanas = listOf(
     Pestana(Rutas.PERFIL, "Perfil", Icons.Default.Person),
 )
 
+private val pestanaGestion = Pestana(Rutas.GESTION, "Gestión", Icons.Default.Settings)
+
+/** Las pestañas de la barra: "Gestión" (los mantenedores) solo existe para el coordinador. */
+private fun pestanasPara(usuario: UserInfo): List<Pestana> =
+    if (usuario.esCoordinador) pestanas.take(2) + pestanaGestion + pestanas.drop(2) else pestanas
+
 @Composable
-private fun BarraInferior(actual: String, nav: NavHostController) {
+private fun BarraInferior(actual: String, nav: NavHostController, usuario: UserInfo) {
     NavigationBar {
-        pestanas.forEach { pestana ->
+        pestanasPara(usuario).forEach { pestana ->
             NavigationBarItem(
                 selected = pestana.ruta == actual,
                 onClick = {
@@ -84,7 +99,7 @@ fun AppNavegacion(usuario: UserInfo) {
     val nav = rememberNavController()
     val sub = usuario.sub.orEmpty()
 
-    fun barra(actual: String): @Composable () -> Unit = { BarraInferior(actual, nav) }
+    fun barra(actual: String): @Composable () -> Unit = { BarraInferior(actual, nav, usuario) }
     val atras: () -> Unit = { nav.popBackStack() }
     val argEvento = listOf(navArgument(Rutas.ARG_EVENTO) { type = NavType.LongType })
 
@@ -100,6 +115,17 @@ fun AppNavegacion(usuario: UserInfo) {
         composable(Rutas.SYNC) { SincronizacionScreen(sub, barra(Rutas.SYNC)) }
         composable(Rutas.PERFIL) { PerfilScreen(usuario, barra(Rutas.PERFIL)) }
         composable(Rutas.CREDENCIALES) { CredencialesScreen(atras) }
+        composable(Rutas.GESTION) {
+            GestionScreen(
+                onProyectos = { nav.navigate(Rutas.GESTION_PROYECTOS) },
+                onEventos = { nav.navigate(Rutas.GESTION_EVENTOS) },
+                onAsistentes = { nav.navigate(Rutas.GESTION_ASISTENTES) },
+                barraInferior = barra(Rutas.GESTION),
+            )
+        }
+        composable(Rutas.GESTION_PROYECTOS) { ProyectosGestionScreen(atras) }
+        composable(Rutas.GESTION_EVENTOS) { EventosGestionScreen(atras) }
+        composable(Rutas.GESTION_ASISTENTES) { AsistentesGestionScreen(atras) }
 
         composable(Rutas.DETALLE, arguments = argEvento) { entrada ->
             val id = entrada.arguments!!.getLong(Rutas.ARG_EVENTO)

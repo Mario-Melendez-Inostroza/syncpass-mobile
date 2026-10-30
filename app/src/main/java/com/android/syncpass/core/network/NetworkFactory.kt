@@ -62,5 +62,6 @@ class NetworkFactory(
 
     val sesionApi: SesionApi by lazy { retrofitAutenticado.create(SesionApi::class.java) }
     val miCuentaApi: MiCuentaApi by lazy { retrofitAutenticado.create(MiCuentaApi::class.java) }
+    val gestionApi: GestionApi by lazy { retrofitAutenticado.create(GestionApi::class.java) }
     val syncPassApi: SyncPassApi by lazy { retrofitAutenticado.create(SyncPassApi::class.java) }
 }

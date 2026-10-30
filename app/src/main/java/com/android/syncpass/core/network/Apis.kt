@@ -1,8 +1,10 @@
 package com.android.syncpass.core.network
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -44,8 +46,45 @@ interface MiCuentaApi {
     @POST("api/mi/talleres/{id}/inscripcion")
     suspend fun inscribir(@Path("id") eventoId: Long): ApiResponse<Any>
 
-    @retrofit2.http.DELETE("api/mi/talleres/{id}/inscripcion")
+    @DELETE("api/mi/talleres/{id}/inscripcion")
     suspend fun cancelar(@Path("id") eventoId: Long): ApiResponse<Any>
+}
+
+/**
+ * Mantenedores del coordinador (proyectos, eventos y asistentes): crear, editar y eliminar. Solo el grupo
+ * COORDINADOR; el servidor responde 403 a cualquier otro y 409 con el motivo si no se puede eliminar.
+ * Las listas de proyectos y eventos salen de [SyncPassApi.catalogo].
+ */
+interface GestionApi {
+    @POST("api/proyectos")
+    suspend fun crearProyecto(@Body request: ProyectoRequest): ApiResponse<ProyectoDto>
+
+    @PUT("api/proyectos/{id}")
+    suspend fun editarProyecto(@Path("id") id: Long, @Body request: ProyectoRequest): ApiResponse<ProyectoDto>
+
+    @DELETE("api/proyectos/{id}")
+    suspend fun eliminarProyecto(@Path("id") id: Long): ApiResponse<Any>
+
+    @POST("api/eventos")
+    suspend fun crearEvento(@Body request: EventoRequest): ApiResponse<EventoDto>
+
+    @PUT("api/eventos/{id}")
+    suspend fun editarEvento(@Path("id") id: Long, @Body request: EventoRequest): ApiResponse<EventoDto>
+
+    @DELETE("api/eventos/{id}")
+    suspend fun eliminarEvento(@Path("id") id: Long): ApiResponse<Any>
+
+    @GET("api/asistentes")
+    suspend fun asistentes(): ApiResponse<List<AsistenteFilaDto>>
+
+    @POST("api/asistentes")
+    suspend fun crearAsistentes(@Body request: AsistenteAltaRequest): ApiResponse<List<AsistenteFilaDto>>
+
+    @PUT("api/asistentes/{id}")
+    suspend fun editarAsistente(@Path("id") id: Long, @Body request: AsistenteEdicionRequest): ApiResponse<AsistenteFilaDto>
+
+    @DELETE("api/asistentes/{id}")
+    suspend fun eliminarAsistente(@Path("id") id: Long): ApiResponse<Any>
 }
 
 /** Sincronización offline-first y quórum. El token lo añade TokenInterceptor; nunca se pasa a mano. */

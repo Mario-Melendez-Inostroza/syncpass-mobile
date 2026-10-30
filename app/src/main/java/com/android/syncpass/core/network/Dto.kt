@@ -94,6 +94,7 @@ data class EventoDto(
     val longitud: Double? = null,
     val radioMetros: Int? = null,
     val actualizadoEn: String? = null,
+    val quorumMinimo: Int? = null,
 )
 
 /** Sin datos personales: solo el código sintético y el tipo de participante (caso §3.2 y §5.1). */
@@ -197,3 +198,44 @@ data class ResumenEventoDto(
     val primeraMarcacion: String? = null,
     val ultimaMarcacion: String? = null,
 )
+
+// ------------------------------------------------------------------ mantenedores del coordinador
+
+/** Cuerpo de POST/PUT /api/proyectos. Las fechas van como "yyyy-MM-dd"; [estado]: PLANIFICADO, EN_CURSO o CERRADO. */
+data class ProyectoRequest(
+    val titulo: String,
+    val descripcion: String?,
+    val areaTematica: String,
+    val unidadVecinal: String,
+    val fechaInicio: String,
+    val fechaTermino: String?,
+    val estado: String,
+)
+
+/** Cuerpo de POST/PUT /api/eventos. [fechaHoraProgramada] es un instante ISO en UTC. */
+data class EventoRequest(
+    val proyectoId: Long,
+    val nombre: String,
+    val fechaHoraProgramada: String,
+    val cuposMaximos: Int?,
+    val quorumMinimo: Int?,
+    val recinto: String?,
+    val latitud: Double?,
+    val longitud: Double?,
+    val radioMetros: Int?,
+)
+
+/** Una fila de GET /api/asistentes: el código lo genera el servidor y no lleva datos personales. */
+data class AsistenteFilaDto(
+    val id: Long? = null,
+    val codigo: String? = null,
+    val tipo: String? = null,
+    val estadoInscripcion: String? = null,
+    val totalAsistencias: Long? = null,
+    val creadoEnTerreno: Boolean? = null,
+)
+
+/** Alta de [cantidad] asistentes (1 a 200) de un mismo tipo. */
+data class AsistenteAltaRequest(val tipo: String, val estadoInscripcion: String?, val cantidad: Int?)
+
+data class AsistenteEdicionRequest(val tipo: String, val estadoInscripcion: String)

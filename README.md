@@ -19,6 +19,129 @@ Usuario ─► App Android (esta)  ┘                                          
 
 Esta app **nunca habla con Cognito**: inicia sesión contra el backend, que es quien se entiende con Cognito.
 
+## El caso que resolvemos
+
+**SyncPass** nace del caso de Ticdgm (CITT Plaza Vespucio, DSY1105): los proyectos de vinculación comunitaria
+toman la asistencia **en papel**, y eso provoca:
+
+| Problema en terreno | Consecuencia | Cómo lo resuelve SyncPass |
+|---|---|---|
+| Hojas que se pierden o no se entienden | Sin evidencia de la participación | Cada asistencia queda guardada en el teléfono y luego en la base de datos, con hora y ubicación referencial |
+| Filas de 15 a 20 minutos en la entrada | Se pierde tiempo del taller | El monitor escanea el **QR** del asistente: un toque |
+| Encuesta días después, con menos de 15 % de respuesta | No se mide el impacto | Encuesta de 1 a 5 **en el momento** |
+| Barrios con poca o ninguna señal | Una app web no sirve | **Offline-first**: todo funciona sin internet y se envía solo cuando vuelve la señal |
+| Transcribir planillas a mano | Errores y semanas de trabajo | El panel web calcula quórum y promedios al instante, sin transcribir |
+
+Metas del caso: registrar en **menos de 5 segundos**, **más de 65 %** de respuesta a la encuesta, reducir **80 %** el
+tiempo de consolidación y **100 %** de registros con respaldo. Son objetivos, no mediciones: aún no se han medido.
+
+### Quiénes lo usan (roles)
+
+| Rol | Quién es | Qué hace en la app |
+|---|---|---|
+| **COORDINADOR** | Docente / Coordinador(a) de proyecto | Gestiona proyectos, eventos y asistentes (mantenedores), ve el quórum y imprime credenciales QR |
+| **MONITOR** | Estudiante voluntario | Registra asistencia por QR o lista, da de alta a quien llega sin inscripción y levanta la encuesta |
+| **ASISTENTE** | Vecino, estudiante o docente que participa | Crea su cuenta, ve los talleres, se inscribe y muestra su QR |
+
+El rol sale del grupo de **Amazon Cognito** (`cognito:groups`) y decide qué pantallas se ven. La autorización real la
+hace el servidor en cada petición: aunque alguien viera un botón que no le corresponde, el servidor responde 403.
+
+## Cómo usamos la IA
+
+Usamos **Claude Code** (Anthropic) como asistente de programación, y lo decimos con claridad:
+
+- **Qué hizo la IA:** a partir del `caso.md` propuso la arquitectura, escribió gran parte del código, las pruebas y la documentación,
+  y ayudó a diagnosticar errores (por ejemplo, por qué la EC2 no podía hablar con Cognito: le faltaba un rol IAM).
+- **Qué hicimos nosotros:** definimos qué pedía el caso, decidimos los roles y las pantallas, corregimos a la IA cuando entendió mal
+  (por ejemplo, que el **asistente también es un rol** y debe poder registrarse e inscribirse), instalamos y **probamos en un teléfono real**,
+  desplegamos en AWS y revisamos cada cambio antes de subirlo a GitHub con su Pull Request.
+- **Cómo evitamos confiar a ciegas:** pruebas automáticas (más abajo), pruebas "rompiendo la regla a propósito" para ver que fallan, y una
+  sección honesta de *lo que no está comprobado*.
+- **Límites de la IA que encontramos:** puede dar por hecho algo que no probó; por eso todo lo marcado como verificado se ejecutó de verdad.
+
+## Mockup: las pantallas de la app
+
+```
+ ┌──────────── Ingreso ────────────┐   ┌──────── Eventos ────────┐   ┌──────── Evento ─────────┐
+ │        [logo SyncPass]          │   │ Alfabetización digital  │   │ Taller de correo        │
+ │  Correo      [______________]   │   │  ▸ Taller de correo     │   │ 05/11 15:00 · Sede 1    │
+ │  Contraseña  [______________]   │   │  ▸ Seguridad en línea   │   │ [ Escanear QR       ]   │
+ │  [      Iniciar sesión      ]   │   │                         │   │ [ Elegir de la lista ]  │
+ │  Soy asistente · Crear cuenta   │   │ Eventos | Sync | Perfil │   │ [ Ver quórum (coord.) ] │
+ └─────────────────────────────────┘   └─────────────────────────┘   └─────────────────────────┘
+
+ ┌──── Encuesta ─────┐  ┌──── Gestión (coordinador) ────┐  ┌──── Portal del asistente ────┐
+ │ Satisfacción ★★★★☆ │  │ [ Proyectos ]                 │  │ Talleres · cupos disponibles │
+ │ Utilidad     ★★★★★ │  │ [ Eventos (talleres) ]        │  │ [ Inscribirme ]              │
+ │ [ Enviar ]        │  │ [ Asistentes ]                │  │ Mi credencial: [ QR grande ] │
+ └───────────────────┘  └───────────────────────────────┘  └──────────────────────────────┘
+```
+
+## Mantenedores (CRUD) de la app
+
+El coordinador tiene la pestaña **Gestión** con tres mantenedores completos: **crear, editar, eliminar y listar**,
+con validación en el formulario antes de enviar y el mensaje del servidor cuando algo no se puede (HTTP 409).
+
+| Mantenedor | Qué administra | Reglas que muestra la app |
+|---|---|---|
+| **Proyectos** | Título, descripción, área, unidad vecinal, fechas y estado (la "creación de curso") | La fecha de término no puede ser anterior a la de inicio; no se elimina un proyecto con eventos |
+| **Eventos (talleres)** | Proyecto, nombre, fecha y hora, cupos, quórum mínimo, recinto y GPS | El quórum no supera los cupos; latitud y longitud van juntas; no se elimina un evento con asistencias |
+| **Asistentes** | Tipo e inscripción; alta de 1 a 200 de una vez ("edición de estudiantes del curso") | El código lo genera el servidor; no se elimina a quien tiene asistencias |
+
+Además, el **asistente** tiene su propio flujo de inscripción (inscribirse y cancelar). Código en `ui/gestion/`
+(`GestionFormularios.kt` validaciones, `GestionViewModels.kt` lógica, `GestionScreens.kt` pantallas).
+
+## Arquitectura de la app (MVVM)
+
+```
+ Pantalla (Compose)  ──►  ViewModel  ──►  Repositorio / API  ──►  Room (local)  o  Retrofit (servidor)
+   solo dibuja            estado y reglas   un solo lugar para       base en el teléfono   backend Spring
+   y avisa eventos        de la pantalla    los datos
+```
+
+| Capa | Qué hace | Dónde |
+|---|---|---|
+| **View** | Dibuja el estado y avisa los toques. No toma decisiones | `ui/**/…Screen.kt` |
+| **ViewModel** | Guarda el estado de la pantalla (`StateFlow`), ejecuta las acciones, sobrevive a girar la pantalla | `ui/**/…ViewModel.kt` |
+| **Model / datos** | `RegistroRepository` (reglas de marcación), `SyncEngine` (sincronización), Room (`data/local`), DTO de red (`core/network`) | `data/`, `sync/`, `core/` |
+
+La capa de red separa también **interfaz → implementación**: `GestionApi`, `SyncPassApi`… son interfaces y Retrofit
+genera la implementación; en las pruebas se sustituyen por dobles, sin servidor.
+
+### Conceptos que usamos, explicados
+
+- **Jetpack Compose**: forma moderna de construir pantallas en Android **escribiendo funciones `@Composable`** en Kotlin en vez de
+  archivos XML. La pantalla es una función del estado: cuando el estado cambia, Compose vuelve a dibujar solo lo que cambió.
+- **Retrofit**: librería que convierte una **interfaz** con anotaciones (`@GET("api/asistentes")`) en llamadas HTTP.
+  Convierte el JSON a objetos Kotlin con **Gson**; **OkHttp** pone el token en cada petición (`TokenInterceptors.kt`) y lo
+  renueva si caduca.
+- **Corrutinas (`suspend`)**: permiten hacer trabajo lento (red, base de datos) **sin bloquear la pantalla** y sin
+  callbacks anidados. Una función `suspend` se pausa y continúa después. Los ViewModels las lanzan en `viewModelScope`, que se
+  cancela solo cuando la pantalla muere.
+- **Flow / StateFlow**: flujo de valores en el tiempo; Compose lo observa (`collectAsStateWithLifecycle`) y se redibuja.
+- **Room**: base SQLite del teléfono con consultas verificadas al compilar. Es lo que hace posible el modo sin conexión.
+- **WorkManager**: ejecuta trabajo diferido y fiable (enviar lo pendiente cuando vuelve la red, aunque la app esté cerrada).
+- **Inyección de dependencias manual** (`AppContainer`): un objeto que construye y entrega las piezas; más fácil de leer que Hilt para este tamaño.
+
+### Librerías: las que trae un proyecto nuevo y las que agregamos
+
+| Origen | Librería | Para qué |
+|---|---|---|
+| **Plantilla de Android Studio** | `core-ktx`, `lifecycle-runtime-ktx` | Extensiones de Kotlin y ciclo de vida |
+| | `activity-compose` | Abrir Compose desde la `Activity` |
+| | Compose BOM, `ui`, `material3`, `ui-tooling-preview` | Interfaz y Material 3 |
+| | JUnit, Espresso, `ui-test-junit4` | Pruebas |
+| **Agregadas por el equipo** | `navigation-compose` | Moverse entre pantallas |
+| | `lifecycle-viewmodel-compose` | ViewModels en Compose |
+| | Retrofit + Gson + OkHttp | Conexión con el backend |
+| | Room + KSP | Base local offline |
+| | WorkManager | Sincronización en segundo plano |
+| | DataStore + Android Keystore | Guardar tokens cifrados |
+| | CameraX + ML Kit | Leer QR con la cámara |
+| | ZXing | Dibujar el QR del asistente |
+| | Play Services Location | GPS referencial |
+| | `kotlinx-coroutines-test`, MockWebServer | Pruebas de ViewModels y de la red |
+
 ## Qué hace
 
 | Requisito del caso | Cómo está resuelto |
@@ -42,7 +165,7 @@ Esta app **nunca habla con Cognito**: inicia sesión contra el backend, que es q
 
 Salen de `caso.md` §3.1, no de las apps de ejemplo del profesor:
 
-- **COORDINADOR** — Docente / Coordinador(a) de Proyecto: registra y además ve el quórum y imprime credenciales.
+- **COORDINADOR** — Docente / Coordinador(a) de Proyecto: registra, ve el quórum, imprime credenciales y administra proyectos, eventos y asistentes en la pestaña **Gestión**.
 - **MONITOR** — Estudiante voluntario: registra asistencia y encuestas en terreno.
 - **ASISTENTE** — Beneficiario comunitario: se registra desde la pantalla de ingreso ("Soy asistente · Crear mi cuenta"), ve los
   talleres próximos con sus cupos, se inscribe y muestra su código QR (`ASISTENTE_{id}`) al monitor. Necesita conexión para
@@ -53,7 +176,7 @@ Un usuario sin ninguno de esos dos grupos no puede entrar (la app lo explica). L
 decidir qué pantallas mostrar vienen del token **sin verificar su firma**: es solo presentación. La autorización
 real la hace el servidor en cada petición.
 
-## Arquitectura
+## Arquitectura: carpetas y decisiones de diseño
 
 ```
 ui/            Compose + ViewModels (una carpeta por pantalla). Navegación en Navegacion.kt
@@ -156,13 +279,17 @@ Todas las respuestas correctas vienen en `{success, data, message, timestamp}`; 
 | `POST api/sync/asistencias` | `{registros:[{uuid, eventoId, asistenteId, marcadoEn, latitud?, longitud?}]}` |
 | `POST api/sync/encuestas` | `{registros:[{uuid, asistenciaUuid, satisfaccion, utilidad, comentarios?, enviadaEn}]}` |
 | `GET api/eventos/{id}/resumen` | quórum (solo COORDINADOR) |
+| `POST/PUT/DELETE api/proyectos[/{id}]` | mantenedor de proyectos (solo COORDINADOR) |
+| `POST/PUT/DELETE api/eventos[/{id}]` | mantenedor de eventos (solo COORDINADOR) |
+| `GET/POST api/asistentes`, `PUT/DELETE api/asistentes/{id}` | mantenedor de asistentes (solo COORDINADOR) |
+| `GET api/mi/perfil`, `GET api/mi/talleres`, `POST/DELETE api/mi/talleres/{id}/inscripcion` | portal del asistente (solo ASISTENTE) |
 
 Cada resultado de un lote es `ACEPTADO`, `DUPLICADO` o `RECHAZADO` (con `motivo`). Un registro rechazado no frena al
 resto. Los nombres de campo se comprobaron mecánicamente contra los DTO del backend (`Dto.kt`).
 
 ## Pruebas
 
-131 pruebas unitarias, 0 fallos. Cubren, sin emulador:
+153 pruebas unitarias, 0 fallos. Cubren, sin emulador:
 
 - **Autenticación** (`AuthFlowTest`): login, errores del backend, rol inválido, y los cinco escenarios de renovación
   de token contra un servidor simulado (renueva y repite, sesión terminada, sin red, error 500, sin bucle).
@@ -172,6 +299,8 @@ resto. Los nombres de campo se comprobaron mecánicamente contra los DTO del bac
 - **Alta en terreno** (27 casos): alta y marcación atómicas (si falla una, no queda la otra), ids provisionales
   distintos, reemplazo por el id real con sus asistencias, reenvío tras perder la respuesta, alta rechazada, y el
   JSON exacto del endpoint nuevo.
+- **Mantenedores** (`GestionTest`, 15 casos): validación de los formularios (incluida la conversión de la hora local a UTC),
+  crear/editar/eliminar con su recarga, y el mensaje del servidor ante un 409 o un 403.
 - **Reglas de registro**, **ViewModels** (antirrebote del QR, login, sesión, quórum), **QR** y **JWT**.
 
 Se comprobó, rompiendo la regla a propósito, que las pruebas del motor detectan que `DUPLICADO` deje de contar
@@ -186,6 +315,7 @@ marcación visible en el panel web (clasificada "fuera del radio", lo que confir
 
 **Sin probar todavía en un teléfono**:
 
+- Las pantallas de **Gestión** (los tres mantenedores): compilan y tienen pruebas unitarias de su lógica, pero no se han abierto en un teléfono.
 - La **alta en terreno** ("Agregar persona sin inscripción") y su reemplazo por el id real: solo hay pruebas unitarias.
 - La **migración de Room v1 → v2**: `MigracionRoomTest` está escrita y compila, pero es instrumentada y necesita un
   teléfono o emulador conectado (`./gradlew :app:connectedDebugAndroidTest`); no se ha ejecutado.
@@ -213,5 +343,5 @@ Proyecto del curso DSY1105 · Desarrollo de Aplicaciones Móviles · Duoc UC.
 | Integrante | GitHub | Aporte en este repositorio |
 |---|---|---|
 | Mario Meléndez | [Mario-Melendez-Inostroza](https://github.com/Mario-Melendez-Inostroza) | Desarrollo e integración del sistema |
-| _(nombre completo)_ | [bx1423](https://github.com/bx1423) | _(completar: qué aportó o revisó)_ |
-| _(nombre completo)_ | [Monnacohu](https://github.com/Monnacohu) | _(completar: qué aportó o revisó)_ |
+| _(nombre completo)_ | [bx1423](https://github.com/bx1423) | Pruebas de los roles del usuario (`UserInfoTest`) |
+| _(nombre completo)_ | [Monnacohu](https://github.com/Monnacohu) | Pruebas del formateo de fechas y decimales (`FormatoTest`) |
