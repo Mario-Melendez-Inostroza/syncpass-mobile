@@ -46,6 +46,19 @@ tiempo de consolidación y **100 %** de registros con respaldo. Son objetivos, n
 El rol sale del grupo de **Amazon Cognito** (`cognito:groups`) y decide qué pantallas se ven. La autorización real la
 hace el servidor en cada petición: aunque alguien viera un botón que no le corresponde, el servidor responde 403.
 
+## Usuario, grupo y rol: cómo se relacionan
+
+| Concepto | Qué es | Ejemplo |
+|---|---|---|
+| **Usuario** | Una cuenta: correo y contraseña. Vive en Amazon Cognito | `docente.demo@example.com` |
+| **Grupo** | Una etiqueta de Cognito que agrupa usuarios. Se escribe dentro del token de inicio de sesión (`cognito:groups`) | `COORDINADOR`, `MONITOR`, `ASISTENTE` |
+| **Rol** | Lo que el sistema entiende a partir del grupo y lo que decide qué puede hacer. El backend convierte el grupo `COORDINADOR` en el rol `ROLE_COORDINADOR` | Rol COORDINADOR: puede crear proyectos |
+| **Perfil del caso** | La persona real que cumple ese rol | El **Docente / Coordinador(a) de proyecto** es quien tiene el rol COORDINADOR |
+
+En resumen: un **usuario** pertenece a un **grupo**, y el grupo le da un **rol**. "Docente" no es un rol del sistema: es la
+persona que cumple el rol de coordinador. El nombre de la cuenta de demostración (`docente.demo@…`) es solo un correo ficticio;
+lo que le da permisos es estar en el grupo `COORDINADOR`.
+
 ## Cómo usamos la IA
 
 Trabajamos con **Claude Code** (Anthropic) como asistente de programación, y lo hacemos como se trabaja hoy de forma profesional:

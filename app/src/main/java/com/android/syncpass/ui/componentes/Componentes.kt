@@ -228,10 +228,10 @@ fun EncabezadoMarca(subtitulo: String, modifier: Modifier = Modifier) {
         ) {
             Surface(shape = MaterialTheme.shapes.large, color = Color.White, shadowElevation = 6.dp) {
                 Image(
-                    painter = painterResource(R.drawable.logo_syncpass),
+                    painter = painterResource(R.drawable.logo_wordmark),
                     contentDescription = "SyncPass",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.width(230.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.width(190.dp).padding(horizontal = 12.dp, vertical = 4.dp),
                 )
             }
             Spacer(Modifier.size(16.dp))
