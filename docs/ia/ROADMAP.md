@@ -17,7 +17,7 @@ Leyenda: ✅ hecho y verificado con pruebas · 🟡 hecho, falta probar en dispo
 | 8 | Rol ASISTENTE: registro, talleres, inscripción con cupos y credencial QR | ✅ (probado contra el API Gateway) · 🟡 app en teléfono |
 | 9 | Mantenedores del coordinador en la app (proyectos, eventos, asistentes) | ✅ pruebas · 🟡 teléfono |
 | 10 | Identidad visual de la app (paleta de marca, modo oscuro opcional) | 🟡 falta verla en teléfono |
-| 11 | Integración continua con GitHub Actions (API y web) | 🟡 configurada; confirmar que corre en verde |
+| 11 | Integración continua con GitHub Actions (API y web) | ✅ corriendo en verde en cada push y Pull Request |
 | 12 | Documentación para la defensa y archivos de contexto para la IA | ✅ |
 
 ## Pendiente
