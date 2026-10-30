@@ -360,5 +360,5 @@ Proyecto del curso DSY1105 · Desarrollo de Aplicaciones Móviles · Duoc UC.
 | Integrante | GitHub | Aporte en este repositorio |
 |---|---|---|
 | Mario Meléndez | [Mario-Melendez-Inostroza](https://github.com/Mario-Melendez-Inostroza) | Desarrollo e integración del sistema |
-| _(nombre completo)_ | [bx1423](https://github.com/bx1423) | Pruebas de los roles del usuario (`UserInfoTest`) |
-| _(nombre completo)_ | [Monnacohu](https://github.com/Monnacohu) | Pruebas del formateo de fechas y decimales (`FormatoTest`) |
+| Benjamín Canales | [bx1423](https://github.com/bx1423) | Pruebas de los roles del usuario (`UserInfoTest`) |
+| María José Huenul | [Monnacohu](https://github.com/Monnacohu) | Pruebas del formateo de fechas y decimales (`FormatoTest`) |
