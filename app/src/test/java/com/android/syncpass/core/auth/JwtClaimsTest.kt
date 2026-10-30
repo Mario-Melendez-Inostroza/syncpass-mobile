@@ -48,7 +48,7 @@ class JwtClaimsTest {
     }
 
     @Test
-    fun `los roles de la app de ejemplo del profesor no son validos`() {
+    fun `los roles de otros proyectos no son validos`() {
         // profesor / estudiante / administrador vienen de otro proyecto; el caso de SyncPass no los define.
         val usuario = JwtClaims.usuario(jwtDePrueba(grupos = listOf("profesor", "estudiante", "administrador", "USER")))!!
         assertFalse(usuario.tieneRolValido)

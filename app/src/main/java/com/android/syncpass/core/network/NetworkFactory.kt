@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  *
  * @param baseUrl debe terminar en "/".
  * @param depurar activa un log BÁSICO (método, URL y código). Nunca registra cuerpos ni cabeceras con
- *                tokens: el ejemplo del profesor los volcaba al log también en release.
+ *                tokens, tampoco en release.
  */
 class NetworkFactory(
     private val baseUrl: String,

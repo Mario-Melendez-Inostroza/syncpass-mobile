@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.Base64
 
-/** Grupos de Cognito que reconoce la app. Vienen del caso (§3.1), no de la app de ejemplo del profesor. */
+/** Grupos de Cognito que reconoce la app. Vienen del caso (§3.1). */
 object Roles {
     /** Docente / Coordinador(a) de Proyecto: ve el quórum y los indicadores. */
     const val COORDINADOR = "COORDINADOR"

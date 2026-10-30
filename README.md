@@ -48,16 +48,33 @@ hace el servidor en cada petición: aunque alguien viera un botón que no le cor
 
 ## Cómo usamos la IA
 
-Usamos **Claude Code** (Anthropic) como asistente de programación, y lo decimos con claridad:
+Trabajamos con **Claude Code** (Anthropic) como asistente de programación, y lo hacemos como se trabaja hoy de forma profesional:
+**no se le da una orden suelta, se le da contexto, reglas y un proceso** en archivos del propio repositorio. La IA no recuerda
+conversaciones anteriores; lo que está escrito en estos archivos es lo que lee al empezar cada tarea.
 
-- **Qué hizo la IA:** a partir del `caso.md` propuso la arquitectura, escribió gran parte del código, las pruebas y la documentación,
-  y ayudó a diagnosticar errores (por ejemplo, por qué la EC2 no podía hablar con Cognito: le faltaba un rol IAM).
-- **Qué hicimos nosotros:** definimos qué pedía el caso, decidimos los roles y las pantallas, corregimos a la IA cuando entendió mal
-  (por ejemplo, que el **asistente también es un rol** y debe poder registrarse e inscribirse), instalamos y **probamos en un teléfono real**,
-  desplegamos en AWS y revisamos cada cambio antes de subirlo a GitHub con su Pull Request.
-- **Cómo evitamos confiar a ciegas:** pruebas automáticas (más abajo), pruebas "rompiendo la regla a propósito" para ver que fallan, y una
-  sección honesta de *lo que no está comprobado*.
-- **Límites de la IA que encontramos:** puede dar por hecho algo que no probó; por eso todo lo marcado como verificado se ejecutó de verdad.
+| Archivo | Qué contiene |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) y `CLAUDE.md` | Guía de entrada: qué es el proyecto, stack, comandos, estructura, convenciones y qué comprobar antes de dar algo por terminado |
+| [`docs/ia/CONTEXTO.md`](docs/ia/CONTEXTO.md) | El caso resumido: problema, roles, datos, metas y restricciones |
+| [`docs/ia/REGLAS.md`](docs/ia/REGLAS.md) | **Instrucciones y restricciones**: sin datos personales, sin secretos, autorización en el servidor, pruebas obligatorias, las acciones de permisos las ejecuta una persona |
+| [`docs/ia/ROADMAP.md`](docs/ia/ROADMAP.md) | Fases del proyecto con su estado real y lo pendiente |
+| [`docs/ia/DECISIONES.md`](docs/ia/DECISIONES.md) | Decisiones de diseño con su porqué (offline-first, idempotencia, roles, sin datos personales…) |
+| [`docs/ia/FLUJO-DE-TRABAJO.md`](docs/ia/FLUJO-DE-TRABAJO.md) | El ciclo de trabajo, quién hace qué y cómo se verifica lo que escribe la IA |
+| [`docs/ia/PROMPTS.md`](docs/ia/PROMPTS.md) | Plantillas de instrucciones por tipo de tarea (funcionalidad, error, pruebas, revisión, despliegue) |
+
+**El ciclo de cada tarea:** especificar → la IA propone un plan y una persona lo aprueba → implementar en pasos pequeños →
+**verificar ejecutando** (compilación, pruebas, lint, prueba real contra la nube) → una persona revisa el cambio → Pull Request con
+integración continua → documentar lo hecho y lo que no se pudo comprobar.
+
+**Qué hace la IA:** propone arquitectura y alternativas, escribe código, pruebas y documentación, diagnostica errores leyendo
+registros y código, y ejecuta las verificaciones.
+**Qué hacemos nosotros:** definimos y corregimos los requisitos (por ejemplo, que el asistente también es un rol), aprobamos los
+planes, revisamos cada cambio, ejecutamos las acciones de permisos en AWS, probamos en el teléfono y en el navegador, y somos
+responsables de lo que se entrega y de poder explicarlo.
+
+**Cómo controlamos sus errores:** nada se da por bueno sin ejecutarlo; se rompen reglas a propósito para comprobar que las pruebas
+las detectan; se compara el contrato entre la app y el backend; se prueba el flujo real contra el API Gateway desplegado; y antes
+de publicar un repositorio se revisa que no haya secretos ni datos reales.
 
 ## Mockup: las pantallas de la app
 
@@ -163,7 +180,7 @@ genera la implementación; en las pruebas se sustituyen por dobles, sin servidor
 
 ## Roles
 
-Salen de `caso.md` §3.1, no de las apps de ejemplo del profesor:
+Salen de `caso.md` §3.1:
 
 - **COORDINADOR** — Docente / Coordinador(a) de Proyecto: registra, ve el quórum, imprime credenciales y administra proyectos, eventos y asistentes en la pestaña **Gestión**.
 - **MONITOR** — Estudiante voluntario: registra asistencia y encuestas en terreno.
@@ -245,7 +262,7 @@ Permisos que pide: **cámara** (leer QR), **ubicación aproximada** (referencial
 
 ### Cuentas de prueba
 
-Las crea el equipo docente en el User Pool de Cognito (no hay auto-registro en la app). En el entorno de demostración:
+Las crea el equipo de coordinación en el User Pool de Cognito (no hay auto-registro en la app). En el entorno de demostración:
 `monitor.demo@example.com` (grupo MONITOR) y `docente.demo@example.com` (grupo COORDINADOR). Son cuentas ficticias.
 
 ### Probar el modo sin conexión

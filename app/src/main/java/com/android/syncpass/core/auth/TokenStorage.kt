@@ -50,8 +50,8 @@ interface SecretCipher {
 }
 
 /**
- * AES-256-GCM con una clave en Android Keystore. Los tokens se guardan cifrados: el ejemplo del profesor
- * los dejaba en claro, y con el respaldo automático activo salían del teléfono.
+ * AES-256-GCM con una clave en Android Keystore. Los tokens se guardan cifrados: en claro, con el respaldo
+ * automático activo, saldrían del teléfono.
  */
 class KeystoreSecretCipher(private val alias: String = "syncpass_tokens") : SecretCipher {
 
